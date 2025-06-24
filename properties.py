@@ -11,6 +11,11 @@ from bpy.props import (
     CollectionProperty,
 )
 
+class RunChatExampleProperty(PropertyGroup):
+    """Property group for storing workflow examples"""
+    example_id: StringProperty(name="Example ID")
+    name: StringProperty(name="Example Name")
+
 class RunChatInputProperty(PropertyGroup):
     param_id: StringProperty(name="Parameter ID")
     node_id: StringProperty(name="Node ID")
@@ -53,13 +58,18 @@ class RunChatProperties(PropertyGroup):
     
     inputs: CollectionProperty(type=RunChatInputProperty)
     outputs: CollectionProperty(type=RunChatOutputProperty)
+    examples: CollectionProperty(type=RunChatExampleProperty)
     
     show_inputs: BoolProperty(name="Show Inputs", default=True)
     show_outputs: BoolProperty(name="Show Outputs", default=True)
     show_advanced: BoolProperty(name="Show Advanced", default=False)
+    show_examples: BoolProperty(name="Show Examples", default=True)
+    examples_loaded: BoolProperty(name="Examples Loaded", default=False)
+    examples_loading: BoolProperty(name="Examples Loading", default=False)
     
     auto_save_images: BoolProperty(name="Auto Save Images", description="Automatically save output images to disk", default=True)
     image_save_path: StringProperty(name="Image Save Path", description="Directory to save output images", default="~/Desktop/Runchat_outputs/", subtype='DIR_PATH')
+    video_save_path: StringProperty(name="Video Save Path", description="Directory to save output videos", default="~/Desktop/Runchat_outputs/", subtype='DIR_PATH')
     
     viewport_width: IntProperty(name="Capture Width", default=1920, min=64, max=8192)
     viewport_height: IntProperty(name="Capture Height", default=1080, min=64, max=8192)
@@ -70,6 +80,7 @@ class RunChatProperties(PropertyGroup):
 
 
 classes = [
+    RunChatExampleProperty,
     RunChatInputProperty,
     RunChatOutputProperty,
     RunChatProperties,

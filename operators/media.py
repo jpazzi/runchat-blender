@@ -5,6 +5,7 @@ import webbrowser
 import os
 import tempfile
 import requests
+import time
 from bpy.types import Operator
 from bpy.props import IntProperty, StringProperty
 
@@ -225,37 +226,36 @@ class RUNCHAT_OT_popup_image_viewer(Operator):
         layout = self.layout
         
         image = bpy.data.images.get(self.image_name)
-        if image:
-            # Calculate display size while maintaining aspect ratio
-            max_width = 550
+        if image and image.has_data:
+            # Calculate image display size
+            max_width = 500
             max_height = 400
             
-            img_width = image.size[0] if image.size[0] > 0 else 512
-            img_height = image.size[1] if image.size[1] > 0 else 512
+            img_width, img_height = image.size
+            if img_width > max_width or img_height > max_height:
+                scale = min(max_width / img_width, max_height / img_height)
+                display_width = int(img_width * scale)
+                display_height = int(img_height * scale)
+            else:
+                display_width = img_width
+                display_height = img_height
             
-            # Calculate scale to fit within max dimensions
-            scale_w = max_width / img_width
-            scale_h = max_height / img_height
-            scale = min(scale_w, scale_h, 1.0)  # Don't scale up
-            
-            display_width = int(img_width * scale)
-            display_height = int(img_height * scale)
+            # Image preview
+            layout.template_preview(image)
             
             # Image info
-            info_box = layout.box()
-            info_box.label(text=f"Image: {self.image_name}")
-            info_box.label(text=f"Size: {img_width} x {img_height}")
-            info_box.label(text=f"Display: {display_width} x {display_height}")
-            
-            # Display the image
-            layout.template_preview(image, show_buttons=False)
+            row = layout.row()
+            row.label(text=f"Size: {img_width} x {img_height}")
             
             # Action buttons
-            button_row = layout.row()
-            button_row.operator("runchat.open_image_editor", text="Open in Image Editor").image_name = self.image_name
-            button_row.operator("runchat.save_image_as", text="Save As...").image_name = self.image_name
+            row = layout.row()
+            op = row.operator("runchat.open_image_editor", text="Open in Image Editor")
+            op.image_name = self.image_name
+            
+            op = row.operator("runchat.save_image_as", text="Save As...")
+            op.image_name = self.image_name
         else:
-            layout.label(text=f"Image '{self.image_name}' not found", icon='ERROR')
+            layout.label(text="Image not found or has no data")
 
 
 class RUNCHAT_OT_open_video(Operator):
@@ -271,14 +271,12 @@ class RUNCHAT_OT_open_video(Operator):
         
         if self.output_index < len(runchat_props.outputs):
             output_prop = runchat_props.outputs[self.output_index]
-            if output_prop.value and output_prop.value.startswith('http'):
+            if output_prop.value:
                 try:
                     webbrowser.open(output_prop.value)
-                    self.report({'INFO'}, f"Opening video: {output_prop.name}")
+                    self.report({'INFO'}, f"Opened video '{output_prop.name}' in external player")
                 except Exception as e:
-                    self.report({'ERROR'}, f"Failed to open video: {e}")
-            else:
-                self.report({'ERROR'}, "No valid video URL")
+                    self.report({'ERROR'}, f"Error opening video: {e}")
         
         return {'FINISHED'}
 
@@ -296,21 +294,13 @@ class RUNCHAT_OT_save_video(Operator):
         
         if self.output_index < len(runchat_props.outputs):
             output_prop = runchat_props.outputs[self.output_index]
-            if output_prop.value and output_prop.value.startswith('http'):
+            if output_prop.value:
                 try:
-                    # Resolve and expand the save path
-                    save_path = runchat_props.image_save_path  # Reuse image save path for videos
-                    if save_path.startswith('//'):
-                        # Blender relative path - convert to absolute
-                        save_path = bpy.path.abspath(save_path)
-                    elif save_path.startswith('~'):
-                        # User home directory
-                        save_path = os.path.expanduser(save_path)
+                    # Download video
+                    response = requests.get(output_prop.value, timeout=60)
+                    response.raise_for_status()
                     
-                    # Ensure the directory exists
-                    os.makedirs(save_path, exist_ok=True)
-                    
-                    # Determine file extension from URL
+                    # Determine file extension
                     url_lower = output_prop.value.lower()
                     if '.mp4' in url_lower:
                         ext = '.mp4'
@@ -325,12 +315,20 @@ class RUNCHAT_OT_save_video(Operator):
                     else:
                         ext = '.mp4'  # Default
                     
+                    # Resolve and expand the save path
+                    save_path = runchat_props.video_save_path
+                    if save_path.startswith('//'):
+                        # Blender relative path - convert to absolute
+                        save_path = bpy.path.abspath(save_path)
+                    elif save_path.startswith('~'):
+                        # User home directory
+                        save_path = os.path.expanduser(save_path)
+                    
+                    # Ensure the directory exists
+                    os.makedirs(save_path, exist_ok=True)
+                    
                     filename = f"{output_prop.name}{ext}"
                     full_path = os.path.join(save_path, filename)
-                    
-                    # Download and save video
-                    response = requests.get(output_prop.value, timeout=60)  # Longer timeout for videos
-                    response.raise_for_status()
                     
                     with open(full_path, 'wb') as f:
                         f.write(response.content)
@@ -338,10 +336,126 @@ class RUNCHAT_OT_save_video(Operator):
                     self.report({'INFO'}, f"Video saved to: {full_path}")
                 except Exception as e:
                     self.report({'ERROR'}, f"Error saving video: {e}")
-            else:
-                self.report({'ERROR'}, "No valid video URL")
         
         return {'FINISHED'}
+
+
+def force_video_sequencer_interface():
+    """Force the Video Sequencer interface by opening a new window"""
+    print("=== OPENING NEW VIDEO SEQUENCER WINDOW ===")
+    
+    try:
+        # Open a new window
+        bpy.ops.wm.window_new()
+        
+        # Get the new window
+        new_window = bpy.context.window_manager.windows[-1]
+        
+        # Set the new window to use Video Editing workspace if available
+        video_workspace = None
+        for workspace in bpy.data.workspaces:
+            if 'Video Editing' in workspace.name:
+                video_workspace = workspace
+                break
+        
+        if video_workspace:
+            print(f"Setting new window to Video Editing workspace: {video_workspace.name}")
+            new_window.workspace = video_workspace
+        
+        # Get the screen from the new window
+        screen = new_window.screen
+        
+        # Find the largest area in the new window and convert it to Video Sequencer
+        largest_area = None
+        largest_size = 0
+        
+        for area in screen.areas:
+            area_size = area.width * area.height
+            if area_size > largest_size:
+                largest_area = area
+                largest_size = area_size
+        
+        if largest_area:
+            print(f"Converting area in new window to SEQUENCE_EDITOR")
+            print(f"Area size: {largest_area.width}x{largest_area.height}")
+            
+            # Change to sequence editor
+            largest_area.type = 'SEQUENCE_EDITOR'
+            
+            # Set to sequencer+preview mode with small delay
+            bpy.app.timers.register(lambda: set_sequencer_mode_in_window(largest_area), first_interval=0.1)
+            
+            print("Successfully opened new Video Sequencer window")
+            return "Opened new Video Sequencer window"
+        else:
+            print("Could not find suitable area in new window")
+            return "Opened new window but could not configure Video Sequencer"
+            
+    except Exception as e:
+        print(f"Error opening new window: {e}")
+        # Fallback to original approach
+        return force_video_sequencer_interface_fallback()
+
+
+def set_sequencer_mode_in_window(area):
+    """Set the sequencer to preview mode in the new window"""
+    if area and area.type == 'SEQUENCE_EDITOR':
+        for space in area.spaces:
+            if space.type == 'SEQUENCE_EDITOR':
+                print("Setting sequencer in new window to SEQUENCER_PREVIEW mode")
+                space.view_type = 'SEQUENCER_PREVIEW'
+                break
+        area.tag_redraw()
+    return None  # Don't repeat timer
+
+
+def force_video_sequencer_interface_fallback():
+    """Fallback method - convert existing area"""
+    print("=== FALLBACK: FORCING VIDEO SEQUENCER INTERFACE ===")
+    
+    # Find the largest area that's not essential (avoid Properties, Outliner, Console)
+    largest_area = None
+    largest_size = 0
+    
+    for area in bpy.context.screen.areas:
+        area_size = area.width * area.height
+        # Skip essential areas and small areas
+        if (area.type not in ['PROPERTIES', 'OUTLINER', 'FILE_BROWSER', 'INFO'] 
+            and area_size > largest_size 
+            and area_size > 10000):  # Ensure it's big enough
+            largest_area = area
+            largest_size = area_size
+    
+    if largest_area:
+        original_type = largest_area.type
+        print(f"Converting largest area ({original_type}) to SEQUENCE_EDITOR")
+        print(f"Area size: {largest_area.width}x{largest_area.height}")
+        
+        # Change to sequence editor
+        largest_area.type = 'SEQUENCE_EDITOR'
+        
+        # Set to sequencer+preview mode with small delay
+        bpy.app.timers.register(lambda: set_sequencer_mode(largest_area), first_interval=0.1)
+        
+        print(f"Successfully converted {original_type} area to Video Sequencer")
+        return f"Opened Video Sequencer (converted from {original_type})"
+    else:
+        print("Could not find suitable area to convert to Video Sequencer")
+        return "Could not open Video Sequencer interface"
+
+
+def set_sequencer_mode(area):
+    """Set the sequencer to preview mode - called with a timer to ensure it takes effect"""
+    if area and area.type == 'SEQUENCE_EDITOR':
+        for space in area.spaces:
+            if space.type == 'SEQUENCE_EDITOR':
+                print("Setting sequencer to SEQUENCER_PREVIEW mode")
+                space.view_type = 'SEQUENCER_PREVIEW'
+                break
+        area.tag_redraw()
+        # Force screen update
+        bpy.context.view_layer.update()
+    return None  # Don't repeat timer
 
 
 class RUNCHAT_OT_import_model(Operator):
@@ -355,97 +469,74 @@ class RUNCHAT_OT_import_model(Operator):
         scene = context.scene
         runchat_props = scene.runchat_properties
         
-        if self.output_index >= len(runchat_props.outputs):
-            self.report({'ERROR'}, "Invalid output index")
-            return {'CANCELLED'}
-        
-        output_prop = runchat_props.outputs[self.output_index]
-        
-        if not output_prop.value or not output_prop.value.startswith('http'):
-            self.report({'ERROR'}, "No valid model URL found")
-            return {'CANCELLED'}
-        
-        try:
-            # Download the model to a temporary file
-            url = output_prop.value
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
-            
-            # Determine file extension and format
-            url_lower = url.lower()
-            if '.gltf' in url_lower:
-                ext = '.gltf'
-                import_func = self.import_gltf
-            elif '.glb' in url_lower:
-                ext = '.glb'
-                import_func = self.import_gltf  # Same importer for GLB
-            elif '.obj' in url_lower:
-                ext = '.obj'
-                import_func = self.import_obj
-            elif '.fbx' in url_lower:
-                ext = '.fbx'
-                import_func = self.import_fbx
-            elif '.dae' in url_lower:
-                ext = '.dae'
-                import_func = self.import_dae
-            elif '.blend' in url_lower:
-                ext = '.blend'
-                import_func = self.import_blend
-            else:
-                self.report({'ERROR'}, "Unsupported model format")
-                return {'CANCELLED'}
-            
-            # Create temporary file
-            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as temp_file:
-                temp_file.write(response.content)
-                temp_filepath = temp_file.name
-            
-            try:
-                # Import the model
-                import_func(temp_filepath)
-                self.report({'INFO'}, f"Successfully imported {output_prop.name}")
-            finally:
-                # Clean up temporary file
+        if self.output_index < len(runchat_props.outputs):
+            output_prop = runchat_props.outputs[self.output_index]
+            if output_prop.value:
                 try:
-                    os.unlink(temp_filepath)
-                except:
-                    pass
+                    # Download model file
+                    response = requests.get(output_prop.value, timeout=60)
+                    response.raise_for_status()
                     
-        except Exception as e:
-            self.report({'ERROR'}, f"Error importing model: {e}")
-            return {'CANCELLED'}
+                    # Determine file extension
+                    url_lower = output_prop.value.lower()
+                    if '.gltf' in url_lower or '.glb' in url_lower:
+                        ext = '.gltf' if '.gltf' in url_lower else '.glb'
+                        import_func = self.import_gltf
+                    elif '.obj' in url_lower:
+                        ext = '.obj'
+                        import_func = self.import_obj
+                    elif '.fbx' in url_lower:
+                        ext = '.fbx'
+                        import_func = self.import_fbx
+                    elif '.dae' in url_lower:
+                        ext = '.dae'
+                        import_func = self.import_dae
+                    elif '.blend' in url_lower:
+                        ext = '.blend'
+                        import_func = self.import_blend
+                    else:
+                        self.report({'ERROR'}, f"Unsupported model format: {output_prop.value}")
+                        return {'CANCELLED'}
+                    
+                    # Create temporary file
+                    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as temp_file:
+                        temp_file.write(response.content)
+                        temp_filepath = temp_file.name
+                    
+                    try:
+                        # Import the model
+                        import_func(temp_filepath)
+                        self.report({'INFO'}, f"Successfully imported model '{output_prop.name}'")
+                    finally:
+                        # Clean up
+                        os.unlink(temp_filepath)
+                        
+                except Exception as e:
+                    self.report({'ERROR'}, f"Error importing model: {e}")
+                    return {'CANCELLED'}
         
         return {'FINISHED'}
     
     def import_gltf(self, filepath):
-        """Import GLTF/GLB file"""
-        try:
-            bpy.ops.import_scene.gltf(filepath=filepath)
-        except:
-            # Fallback for older Blender versions
-            bpy.ops.import_scene.gltf2(filepath=filepath)
+        bpy.ops.import_scene.gltf(filepath=filepath)
     
     def import_obj(self, filepath):
-        """Import OBJ file"""
         bpy.ops.import_scene.obj(filepath=filepath)
     
     def import_fbx(self, filepath):
-        """Import FBX file"""
         bpy.ops.import_scene.fbx(filepath=filepath)
     
     def import_dae(self, filepath):
-        """Import DAE (Collada) file"""
         bpy.ops.wm.collada_import(filepath=filepath)
     
     def import_blend(self, filepath):
-        """Import Blend file (append objects)"""
-        # Append all objects from the blend file
+        # For .blend files, we append objects from the file
         with bpy.data.libraries.load(filepath) as (data_from, data_to):
             data_to.objects = data_from.objects
         
         # Link objects to current scene
         for obj in data_to.objects:
-            if obj:
+            if obj is not None:
                 bpy.context.collection.objects.link(obj)
 
 
@@ -458,99 +549,220 @@ class RUNCHAT_OT_save_model(Operator):
     filepath: StringProperty(subtype="FILE_PATH")
     
     def execute(self, context):
-        scene = context.scene
-        runchat_props = scene.runchat_properties
-        
-        if self.output_index >= len(runchat_props.outputs):
-            self.report({'ERROR'}, "Invalid output index")
-            return {'CANCELLED'}
-        
-        output_prop = runchat_props.outputs[self.output_index]
-        
-        if not output_prop.value:
-            self.report({'ERROR'}, "No model data available")
-            return {'CANCELLED'}
-        
         try:
-            # Handle URL-based models
-            if output_prop.value.startswith('http'):
-                # Download the model
-                response = requests.get(output_prop.value, timeout=30)
-                response.raise_for_status()
-                model_data = response.content
-                
-                # Determine extension from URL
-                url_lower = output_prop.value.lower()
-                if '.gltf' in url_lower:
-                    ext = '.gltf'
-                elif '.glb' in url_lower:
-                    ext = '.glb'
-                elif '.obj' in url_lower:
-                    ext = '.obj'
-                elif '.fbx' in url_lower:
-                    ext = '.fbx'
-                elif '.dae' in url_lower:
-                    ext = '.dae'
-                elif '.blend' in url_lower:
-                    ext = '.blend'
-                else:
-                    ext = '.gltf'  # Default
-                    
+            # Get selected objects or all objects if none selected
+            selected_objects = bpy.context.selected_objects
+            if not selected_objects:
+                # Select all mesh objects
+                for obj in bpy.context.scene.objects:
+                    if obj.type == 'MESH':
+                        obj.select_set(True)
+                selected_objects = bpy.context.selected_objects
+            
+            if not selected_objects:
+                self.report({'ERROR'}, "No objects to export")
+                return {'CANCELLED'}
+            
+            # Determine export format from filepath extension
+            filepath_lower = self.filepath.lower()
+            if filepath_lower.endswith('.gltf'):
+                bpy.ops.export_scene.gltf(filepath=self.filepath, use_selection=True)
+            elif filepath_lower.endswith('.glb'):
+                bpy.ops.export_scene.gltf(filepath=self.filepath, use_selection=True, export_format='GLB')
+            elif filepath_lower.endswith('.obj'):
+                bpy.ops.export_scene.obj(filepath=self.filepath, use_selection=True)
+            elif filepath_lower.endswith('.fbx'):
+                bpy.ops.export_scene.fbx(filepath=self.filepath, use_selection=True)
+            elif filepath_lower.endswith('.dae'):
+                bpy.ops.wm.collada_export(filepath=self.filepath, selected=True)
+            elif filepath_lower.endswith('.blend'):
+                # For .blend, save a new blend file
+                bpy.ops.wm.save_as_mainfile(filepath=self.filepath, copy=True)
             else:
-                # Handle base64 encoded data (legacy)
-                import base64
-                model_data = base64.b64decode(output_prop.value)
-                ext = '.gltf'  # Default for base64
+                self.report({'ERROR'}, "Unsupported export format")
+                return {'CANCELLED'}
             
-            # Generate filename if not provided
-            if not self.filepath:
-                output_dir = bpy.path.abspath(runchat_props.image_save_path)
-                os.makedirs(output_dir, exist_ok=True)
-                self.filepath = os.path.join(output_dir, f"{output_prop.name}{ext}")
-            
-            # Write to file
-            with open(self.filepath, 'wb') as f:
-                f.write(model_data)
-            
-            self.report({'INFO'}, f"Model saved to {self.filepath}")
-            
+            self.report({'INFO'}, f"Model saved to: {self.filepath}")
         except Exception as e:
-            self.report({'ERROR'}, f"Error saving model: {str(e)}")
+            self.report({'ERROR'}, f"Error saving model: {e}")
             return {'CANCELLED'}
         
         return {'FINISHED'}
     
     def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
+class RUNCHAT_OT_import_video(Operator):
+    """Import video into Video Sequencer"""
+    bl_idname = "runchat.import_video"
+    bl_label = "Import to Video Sequencer"
+    
+    output_index: IntProperty()
+    
+    def execute(self, context):
         scene = context.scene
         runchat_props = scene.runchat_properties
         
-        if self.output_index < len(runchat_props.outputs):
-            output_prop = runchat_props.outputs[self.output_index]
-            
-            # Determine extension from URL if possible
-            if output_prop.value and output_prop.value.startswith('http'):
-                url_lower = output_prop.value.lower()
-                if '.gltf' in url_lower:
-                    ext = '.gltf'
-                elif '.glb' in url_lower:
-                    ext = '.glb'
-                elif '.obj' in url_lower:
-                    ext = '.obj'
-                elif '.fbx' in url_lower:
-                    ext = '.fbx'
-                elif '.dae' in url_lower:
-                    ext = '.dae'
-                elif '.blend' in url_lower:
-                    ext = '.blend'
-                else:
-                    ext = '.gltf'
-            else:
-                ext = '.gltf'
-            
-            self.filepath = f"{output_prop.name}{ext}"
+        if self.output_index >= len(runchat_props.outputs):
+            self.report({'ERROR'}, f"Invalid output index: {self.output_index}")
+            return {'CANCELLED'}
         
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
+        output_prop = runchat_props.outputs[self.output_index]
+        if not output_prop.value:
+            self.report({'ERROR'}, "Output property has no value")
+            return {'CANCELLED'}
+        
+        print("=== VIDEO IMPORT DEBUG START ===")
+        self.report({'INFO'}, f"Importing video: {output_prop.name}")
+        
+        try:
+            # Download the video to a temporary file
+            print(f"Downloading video from: {output_prop.value}")
+            self.report({'INFO'}, "Downloading video...")
+            
+            response = requests.get(output_prop.value, timeout=60)
+            response.raise_for_status()
+            print(f"Video downloaded successfully. Size: {len(response.content)} bytes")
+            
+            # Determine file extension
+            url_lower = output_prop.value.lower()
+            if '.mp4' in url_lower:
+                ext = '.mp4'
+            elif '.mov' in url_lower:
+                ext = '.mov'
+            elif '.avi' in url_lower:
+                ext = '.avi'
+            elif '.mkv' in url_lower:
+                ext = '.mkv'
+            elif '.webm' in url_lower:
+                ext = '.webm'
+            elif '.m4v' in url_lower:
+                ext = '.m4v'
+            else:
+                ext = '.mp4'  # Default
+            
+            print(f"Detected video format: {ext}")
+            
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as temp_file:
+                temp_file.write(response.content)
+                temp_filepath = temp_file.name
+            
+            print(f"Video saved to temporary file: {temp_filepath}")
+            
+            # Copy to a more permanent location in user's temp directory
+            import shutil
+            permanent_filename = f"runchat_video_{output_prop.name}_{int(time.time())}{ext}"
+            permanent_filepath = os.path.join(tempfile.gettempdir(), permanent_filename)
+            shutil.copy2(temp_filepath, permanent_filepath)
+            print(f"Video copied to permanent location: {permanent_filepath}")
+            
+            try:
+                # Force Video Sequencer interface FIRST
+                status_message = force_video_sequencer_interface()
+                
+                # Ensure we have a Video Sequencer scene setup
+                print(f"Scene has sequence editor: {scene.sequence_editor is not None}")
+                if not scene.sequence_editor:
+                    print("Creating sequence editor...")
+                    scene.sequence_editor_create()
+                    self.report({'INFO'}, "Created Video Sequencer for scene")
+                
+                # Find or use the sequence editor area
+                sequencer_area = None
+                for area in bpy.context.screen.areas:
+                    if area.type == 'SEQUENCE_EDITOR':
+                        sequencer_area = area
+                        break
+                
+                if not sequencer_area:
+                    raise Exception("Could not find Sequence Editor area after forcing interface")
+                
+                print(f"Using sequence editor area: {sequencer_area}")
+                
+                # Get the space data for proper context
+                sequencer_space = None
+                for space in sequencer_area.spaces:
+                    if space.type == 'SEQUENCE_EDITOR':
+                        sequencer_space = space
+                        break
+                
+                # Set the context and import the video
+                with bpy.context.temp_override(area=sequencer_area, space_data=sequencer_space):
+                    # Import the video into the sequencer
+                    print("Adding movie strip to sequencer...")
+                    bpy.ops.sequencer.movie_strip_add(
+                        filepath=permanent_filepath,
+                        frame_start=1,
+                        channel=1
+                    )
+                    print("Movie strip added successfully")
+                
+                # Set the scene frame range to match the video
+                if scene.sequence_editor.sequences:
+                    last_sequence = scene.sequence_editor.sequences[-1]
+                    print(f"Video sequence length: {last_sequence.frame_final_end} frames")
+                    scene.frame_end = last_sequence.frame_final_end
+                    self.report({'INFO'}, f"Set scene length to {last_sequence.frame_final_end} frames")
+                
+                success_msg = f"Successfully imported video '{output_prop.name}' to Video Sequencer"
+                print(success_msg)
+                self.report({'INFO'}, success_msg)
+                self.report({'INFO'}, status_message)
+                self.report({'INFO'}, f"Video file location: {permanent_filepath}")
+                
+            finally:
+                # Clean up only the temporary file, keep the permanent one
+                try:
+                    os.unlink(temp_filepath)
+                    print(f"Cleaned up temporary file: {temp_filepath}")
+                    print(f"Permanent video file kept at: {permanent_filepath}")
+                except Exception as cleanup_error:
+                    print(f"Failed to cleanup temp file: {cleanup_error}")
+                    
+        except Exception as e:
+            error_msg = f"Error importing video: {e}"
+            print(error_msg)
+            print(f"Full exception: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            self.report({'ERROR'}, error_msg)
+            return {'CANCELLED'}
+        
+        print("=== VIDEO IMPORT DEBUG END ===")
+        return {'FINISHED'}
+
+
+class RUNCHAT_OT_open_video_editor(Operator):
+    """Open Video Editor workspace"""
+    bl_idname = "runchat.open_video_editor"
+    bl_label = "Open Video Editor"
+    
+    def execute(self, context):
+        try:
+            print("=== OPENING VIDEO EDITOR WORKSPACE ===")
+            self.report({'INFO'}, "Opening Video Editor workspace...")
+            
+            status_message = force_video_sequencer_interface()
+            
+            # Ensure we have a Video Sequencer scene setup
+            scene = context.scene
+            if not scene.sequence_editor:
+                print("Creating sequence editor...")
+                scene.sequence_editor_create()
+                self.report({'INFO'}, "Created Video Sequencer for scene")
+            
+            self.report({'INFO'}, status_message)
+            print("Video Editor opened successfully")
+                
+        except Exception as e:
+            error_msg = f"Error opening Video Editor: {e}"
+            print(error_msg)
+            self.report({'ERROR'}, error_msg)
+            
+        return {'FINISHED'}
 
 
 # Classes to register
@@ -560,8 +772,10 @@ classes = [
     RUNCHAT_OT_open_image_editor,
     RUNCHAT_OT_save_image_as,
     RUNCHAT_OT_popup_image_viewer,
+    RUNCHAT_OT_open_video_editor,
     RUNCHAT_OT_open_video,
     RUNCHAT_OT_save_video,
     RUNCHAT_OT_import_model,
     RUNCHAT_OT_save_model,
+    RUNCHAT_OT_import_video,
 ] 

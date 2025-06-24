@@ -61,6 +61,19 @@ def register():
         
         print("✅ Runchat Addon Registered Successfully")
         
+        # Auto-load examples after a short delay to avoid blocking startup
+        def load_examples_delayed():
+            try:
+                print("Auto-loading workflow examples...")
+                bpy.ops.runchat.load_examples()
+            except Exception as e:
+                print(f"Failed to auto-load examples: {e}")
+            # Don't repeat the timer
+            return None
+        
+        # Register timer to load examples after 2 seconds
+        bpy.app.timers.register(load_examples_delayed, first_interval=2.0)
+        
     except Exception as e:
         print(f"❌ Error during Runchat addon registration: {e}")
         import traceback

@@ -100,7 +100,69 @@ class RUNCHAT_OT_open_info_log(Operator):
         return {'FINISHED'}
 
 
+class RUNCHAT_OT_clear_workflow(Operator):
+    """Clear current Runchat workflow and reset addon state"""
+    bl_idname = "runchat.clear_workflow"
+    bl_label = "Clear Workflow"
+    bl_description = "Clear all workflow data and reset the addon"
+    
+    def execute(self, context):
+        try:
+            scene = context.scene
+            runchat_props = scene.runchat_properties
+            
+            log_to_blender("=== CLEARING RUNCHAT WORKFLOW ===")
+            
+            # Clear workflow data
+            runchat_props.runchat_id = ""
+            runchat_props.schema_loaded = False
+            runchat_props.workflow_name = ""
+            runchat_props.status = "Ready"
+            runchat_props.instance_id = ""
+            
+            # Clear progress
+            runchat_props.progress = 0.0
+            runchat_props.progress_message = ""
+            
+            # Clear inputs
+            runchat_props.inputs.clear()
+            log_to_blender(f"Cleared {len(runchat_props.inputs)} input properties")
+            
+            # Clear outputs
+            runchat_props.outputs.clear()
+            log_to_blender(f"Cleared {len(runchat_props.outputs)} output properties")
+            
+            # Clear any loaded images from this workflow
+            images_cleared = 0
+            for image in list(bpy.data.images):
+                # Clear images that start with common Runchat prefixes
+                if (image.name.startswith('Media') or 
+                    image.name.startswith('RunChat_Image') or 
+                    image.name.startswith('Runchat_Image')):
+                    bpy.data.images.remove(image)
+                    images_cleared += 1
+            
+            if images_cleared > 0:
+                log_to_blender(f"Cleared {images_cleared} workflow images from Blender")
+            
+            # Force UI refresh
+            for area in bpy.context.screen.areas:
+                if area.type == 'PROPERTIES':
+                    area.tag_redraw()
+            
+            log_to_blender("Workflow cleared successfully")
+            self.report({'INFO'}, "Runchat workflow cleared successfully")
+            
+        except Exception as e:
+            log_to_blender(f"Error clearing workflow: {e}", 'ERROR')
+            self.report({'ERROR'}, f"Error clearing workflow: {e}")
+            return {'CANCELLED'}
+        
+        return {'FINISHED'}
+
+
 classes = [
     RUNCHAT_OT_test_api_connection,
     RUNCHAT_OT_open_info_log,
+    RUNCHAT_OT_clear_workflow,
 ] 

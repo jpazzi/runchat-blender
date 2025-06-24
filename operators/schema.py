@@ -363,7 +363,112 @@ class RUNCHAT_OT_test_connection(Operator):
         return {'FINISHED'}
 
 
+class RUNCHAT_OT_load_examples(Operator):
+    """Load workflow examples for Blender"""
+    bl_idname = "runchat.load_examples"
+    bl_label = "Load Examples"
+    
+    def execute(self, context):
+        scene = context.scene
+        runchat_props = scene.runchat_properties
+        
+        print("=== LOADING BLENDER EXAMPLES ===")
+        
+        # Check if requests module is available
+        try:
+            import requests
+            print("✅ Requests module available")
+        except ImportError as e:
+            print(f"❌ Requests module not available: {e}")
+            runchat_props.examples_loaded = False
+            runchat_props.examples_loading = False
+            self.report({'ERROR'}, "Python requests module not available in Blender")
+            return {'CANCELLED'}
+        
+        # Set loading state
+        runchat_props.examples_loading = True
+        
+        # Clear existing examples
+        runchat_props.examples.clear()
+        
+        try:
+            print("Calling API to fetch examples...")
+            # Fetch examples from API - simple approach
+            examples_data = api.RunChatAPI.get_examples_for_plugin("blender")
+            
+            print(f"API returned: {examples_data}")
+            print(f"API data type: {type(examples_data)}")
+            
+            if examples_data and isinstance(examples_data, dict) and 'examples' in examples_data:
+                examples = examples_data['examples']
+                print(f"Loading {len(examples)} examples...")
+                
+                # Simple processing
+                for i, example_data in enumerate(examples):
+                    print(f"Processing example {i}: {example_data}")
+                    example_prop = runchat_props.examples.add()
+                    example_prop.example_id = example_data.get('id', '')
+                    example_prop.name = example_data.get('name', 'Unknown Example')
+                    print(f"Added: '{example_prop.name}' (ID: '{example_prop.example_id}')")
+                
+                runchat_props.examples_loaded = True
+                runchat_props.examples_loading = False
+                self.report({'INFO'}, f"Loaded {len(examples)} examples")
+                print(f"✅ Loaded {len(examples)} examples")
+                
+            elif examples_data is None:
+                print("API returned None - likely a network or server error")
+                runchat_props.examples_loaded = False
+                runchat_props.examples_loading = False
+                self.report({'ERROR'}, "Failed to connect to examples API - check your internet connection")
+                
+            else:
+                print(f"Unexpected API response format: {examples_data}")
+                runchat_props.examples_loaded = False
+                runchat_props.examples_loading = False
+                self.report({'ERROR'}, "Unexpected response format from examples API")
+                
+        except Exception as e:
+            print(f"Exception in load_examples: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            runchat_props.examples_loaded = False
+            runchat_props.examples_loading = False
+            self.report({'ERROR'}, f"Failed to load examples: {str(e)}")
+            return {'CANCELLED'}
+        
+        return {'FINISHED'}
+
+
+class RUNCHAT_OT_use_example(Operator):
+    """Use a workflow example by loading its schema"""
+    bl_idname = "runchat.use_example"
+    bl_label = "Use Example"
+    
+    example_id: StringProperty()
+    
+    def execute(self, context):
+        scene = context.scene
+        runchat_props = scene.runchat_properties
+        
+        if not self.example_id:
+            self.report({'ERROR'}, "No example ID provided")
+            return {'CANCELLED'}
+        
+        print(f"Using example with ID: {self.example_id}")
+        
+        # Set the runchat_id and load schema
+        runchat_props.runchat_id = self.example_id
+        
+        # Trigger schema loading
+        bpy.ops.runchat.load_schema()
+        
+        return {'FINISHED'}
+
+
 classes = [
     RUNCHAT_OT_load_schema,
     RUNCHAT_OT_test_connection,
+    RUNCHAT_OT_load_examples,
+    RUNCHAT_OT_use_example,
 ] 

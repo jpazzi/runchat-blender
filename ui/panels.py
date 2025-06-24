@@ -22,6 +22,38 @@ class RUNCHAT_PT_main_panel(Panel):
         scene = context.scene
         runchat_props = scene.runchat_properties
         
+        # Workflow Examples section
+        examples_box = layout.box()
+        examples_header = examples_box.row()
+        examples_header.prop(runchat_props, "show_examples", 
+                           icon="TRIA_DOWN" if runchat_props.show_examples else "TRIA_RIGHT",
+                           icon_only=True, emboss=False)
+        examples_header.label(text="Workflow Examples")
+        
+        if runchat_props.show_examples:
+            if runchat_props.examples_loading:
+                # Show loading state
+                loading_row = examples_box.row()
+                loading_row.label(text="Loading examples...", icon="TIME")
+            elif len(runchat_props.examples) == 0:
+                if runchat_props.examples_loaded:
+                    examples_box.label(text="No examples available", icon="INFO")
+                else:
+                    # Show manual load button - no auto-loading
+                    examples_box.operator("runchat.load_examples", text="Load Examples")
+                    hint_row = examples_box.row()
+                    hint_row.scale_y = 0.8
+                    hint_row.label(text="Click to load workflow examples", icon="INFO")
+            else:
+                # Show loaded examples
+                for i, example in enumerate(runchat_props.examples):
+                    example_row = examples_box.row()
+                    example_row.label(text=example.name)
+                    op = example_row.operator("runchat.use_example", text="Use")
+                    op.example_id = example.example_id
+        
+        layout.separator()
+        
         # Main controls
         row = layout.row()
         row.prop(runchat_props, "runchat_id")
@@ -270,16 +302,44 @@ class RUNCHAT_PT_outputs_panel(Panel):
     def draw_video_output(self, layout, output_prop, index):
         """Draw video output with controls"""
         video_box = layout.box()
-        video_box.label(text="Video Output", icon="FILE_MOVIE")
+        
+        # Header with video icon and info
+        header_row = video_box.row()
+        header_row.label(text="Video Output", icon="FILE_MOVIE")
         
         # Show URL preview
         url_preview = output_prop.value[:50] + "..." if len(output_prop.value) > 50 else output_prop.value
         video_box.label(text=f"URL: {url_preview}")
         
-        # Video controls
+        # Check if video sequences exist in the current scene (indicating auto-import happened)
+        scene = bpy.context.scene
+        has_video_sequences = (scene.sequence_editor and 
+                              len(scene.sequence_editor.sequences) > 0 and
+                              any(seq.type == 'MOVIE' for seq in scene.sequence_editor.sequences))
+        
+        if has_video_sequences:
+            # Show auto-import status
+            import_status_box = video_box.box()
+            import_status_box.alert = False  # Use normal coloring
+            status_row = import_status_box.row()
+            status_row.label(text="✅ Auto-imported to Video Sequencer", icon="CHECKMARK")
+            
+            # Quick action to open sequencer
+            action_row = import_status_box.row()
+            action_row.operator("runchat.open_video_editor", text="Open Video Sequencer", icon="SEQUENCE")
+        else:
+            # Primary action - Import to Video Sequencer (most prominent)
+            import_box = video_box.box()
+            import_box.alert = True  # Make it stand out
+            import_row = import_box.row()
+            import_row.scale_y = 1.5  # Make button bigger
+            import_op = import_row.operator("runchat.import_video", text="⚡ Import to Video Sequencer", icon="SEQUENCE")
+            import_op.output_index = index
+        
+        # Secondary actions (always available)
         controls_row = video_box.row()
-        controls_row.operator("runchat.open_video", text="Open Video", icon="PLAY").output_index = index
-        controls_row.operator("runchat.save_video", text="Save Video", icon="FILE_FOLDER").output_index = index
+        controls_row.operator("runchat.open_video", text="Open in Browser", icon="PLAY").output_index = index
+        controls_row.operator("runchat.save_video", text="Save to File", icon="FILE_FOLDER").output_index = index
         
         # Copy URL button
         copy_row = video_box.row()
@@ -366,9 +426,12 @@ class RUNCHAT_PT_settings_panel(Panel):
         scene = context.scene
         runchat_props = scene.runchat_properties
         
-        # Image settings
-        layout.prop(runchat_props, "auto_save_images")
-        layout.prop(runchat_props, "image_save_path")
+        # Save paths settings
+        save_box = layout.box()
+        save_box.label(text="Save Paths:", icon="FILE_FOLDER")
+        save_box.prop(runchat_props, "auto_save_images")
+        save_box.prop(runchat_props, "image_save_path")
+        save_box.prop(runchat_props, "video_save_path")
         
         # Viewport capture settings
         viewport_box = layout.box()
@@ -407,6 +470,10 @@ class RUNCHAT_PT_help_panel(Panel):
         api_row = debug_box.row()
         api_row.operator("runchat.test_api_connection", text="Test API", icon="LINKED")
         api_row.operator("runchat.open_info_log", text="Show Info Log", icon="INFO")
+        
+        # Clear workflow row
+        clear_row = debug_box.row()
+        clear_row.operator("runchat.clear_workflow", text="Clear Workflow", icon="TRASH")
 
 
 

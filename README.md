@@ -30,6 +30,17 @@ A comprehensive Blender plugin for integrating with RunChat workflows, providing
 - **Progress Indicators**: Visual feedback during all operations
 - **Advanced Settings**: Optional advanced controls for power users
 
+### Workflow Examples (New!)
+
+The addon now automatically loads curated Blender workflow examples on startup:
+
+- **Auto-discovery**: Examples are loaded automatically when the addon starts
+- **One-click usage**: Click "Use" next to any example to load it instantly  
+- **Refresh examples**: Use the refresh button to get the latest examples
+- **Tagged workflows**: Examples show relevant tags like "blender", "3d", etc.
+
+The examples are fetched from `https://runchat.app/api/v1/examples?plugin=blender` and display workflows specifically curated for Blender users.
+
 ## Installation
 
 1. Download or clone this repository

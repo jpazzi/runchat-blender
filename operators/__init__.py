@@ -28,6 +28,8 @@ def register():
     
     # Schema operators
     bpy.utils.register_class(schema.RUNCHAT_OT_load_schema)
+    bpy.utils.register_class(schema.RUNCHAT_OT_load_examples)
+    bpy.utils.register_class(schema.RUNCHAT_OT_use_example)
     
     # Capture operators
     bpy.utils.register_class(capture.RUNCHAT_OT_preview_viewport)
@@ -43,10 +45,12 @@ def register():
     bpy.utils.register_class(media.RUNCHAT_OT_popup_image_viewer)
     bpy.utils.register_class(media.RUNCHAT_OT_open_image_editor)
     bpy.utils.register_class(media.RUNCHAT_OT_save_image_as)
+    bpy.utils.register_class(media.RUNCHAT_OT_open_video_editor)
     bpy.utils.register_class(media.RUNCHAT_OT_open_video)
     bpy.utils.register_class(media.RUNCHAT_OT_save_video)
     bpy.utils.register_class(media.RUNCHAT_OT_import_model)
     bpy.utils.register_class(media.RUNCHAT_OT_save_model)
+    bpy.utils.register_class(media.RUNCHAT_OT_import_video)
     
     # Utility operations
     bpy.utils.register_class(utils.RUNCHAT_OT_copy_text)
@@ -57,12 +61,14 @@ def register():
     # Debug operators
     bpy.utils.register_class(debug.RUNCHAT_OT_test_api_connection)
     bpy.utils.register_class(debug.RUNCHAT_OT_open_info_log)
+    bpy.utils.register_class(debug.RUNCHAT_OT_clear_workflow)
 
 def unregister():
     """Unregister all operator classes"""
     import bpy
     
     # Debug operators
+    bpy.utils.unregister_class(debug.RUNCHAT_OT_clear_workflow)
     bpy.utils.unregister_class(debug.RUNCHAT_OT_open_info_log)
     bpy.utils.unregister_class(debug.RUNCHAT_OT_test_api_connection)
     
@@ -73,10 +79,12 @@ def unregister():
     bpy.utils.unregister_class(utils.RUNCHAT_OT_copy_text)
     
     # Media operations
+    bpy.utils.unregister_class(media.RUNCHAT_OT_import_video)
     bpy.utils.unregister_class(media.RUNCHAT_OT_save_model)
     bpy.utils.unregister_class(media.RUNCHAT_OT_import_model)
     bpy.utils.unregister_class(media.RUNCHAT_OT_save_video)
     bpy.utils.unregister_class(media.RUNCHAT_OT_open_video)
+    bpy.utils.unregister_class(media.RUNCHAT_OT_open_video_editor)
     bpy.utils.unregister_class(media.RUNCHAT_OT_save_image_as)
     bpy.utils.unregister_class(media.RUNCHAT_OT_open_image_editor)
     bpy.utils.unregister_class(media.RUNCHAT_OT_popup_image_viewer)
@@ -92,6 +100,8 @@ def unregister():
     bpy.utils.unregister_class(capture.RUNCHAT_OT_preview_viewport)
     
     # Schema operators
+    bpy.utils.unregister_class(schema.RUNCHAT_OT_use_example)
+    bpy.utils.unregister_class(schema.RUNCHAT_OT_load_examples)
     bpy.utils.unregister_class(schema.RUNCHAT_OT_load_schema)
     
     # Execution operators

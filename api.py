@@ -13,6 +13,7 @@ def log_to_blender(message, level='INFO'):
 class RunChatAPI:
     BASE_URL = "https://runchat.app/api/v1"
     UPLOAD_URL = "https://runchat.app/api/upload/supabase"
+    EXAMPLES_URL = "https://runchat.app/api/v1/examples"
     
     @staticmethod
     def get_headers(api_key):
@@ -20,6 +21,68 @@ class RunChatAPI:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
+    
+    @staticmethod
+    def get_examples_for_plugin(plugin="blender"):
+        """Get curated workflow examples for a specific plugin"""
+        url = f"{RunChatAPI.EXAMPLES_URL}?plugin={plugin}"
+        
+        log_to_blender(f"=== FETCHING EXAMPLES ===")
+        log_to_blender(f"Plugin: {plugin}")
+        log_to_blender(f"URL: {url}")
+        
+        try:
+            log_to_blender("Making request to examples API...")
+            response = requests.get(url, timeout=30)
+            log_to_blender(f"Response status: {response.status_code}")
+            log_to_blender(f"Response headers: {dict(response.headers)}")
+            
+            if response.status_code != 200:
+                log_to_blender(f"Non-200 status code: {response.status_code}", 'ERROR')
+                log_to_blender(f"Response text: {response.text}", 'ERROR')
+                return None
+            
+            response.raise_for_status()
+            
+            log_to_blender("Parsing JSON response...")
+            result = response.json()
+            log_to_blender(f"Parsed JSON successfully. Type: {type(result)}")
+            
+            if isinstance(result, dict):
+                log_to_blender(f"Result keys: {list(result.keys())}")
+                examples = result.get("examples", [])
+                log_to_blender(f"Found {len(examples)} examples for {plugin}")
+                
+                # Log first example for debugging
+                if examples:
+                    log_to_blender(f"First example: {examples[0]}")
+                
+                return result
+            else:
+                log_to_blender(f"Unexpected result type: {type(result)}", 'ERROR')
+                return None
+            
+        except requests.exceptions.Timeout:
+            log_to_blender("Examples request timed out after 30 seconds", 'ERROR')
+            return None
+        except requests.exceptions.ConnectionError as e:
+            log_to_blender(f"Connection error while fetching examples: {e}", 'ERROR')
+            return None
+        except requests.exceptions.HTTPError as e:
+            log_to_blender(f"HTTP Error while fetching examples: {e}", 'ERROR')
+            return None
+        except requests.exceptions.RequestException as e:
+            log_to_blender(f"Request error fetching examples: {e}", 'ERROR')
+            return None
+        except ValueError as e:
+            log_to_blender(f"JSON decode error for examples: {e}", 'ERROR')
+            log_to_blender(f"Response text: {response.text}", 'ERROR')
+            return None
+        except Exception as e:
+            log_to_blender(f"Unexpected error fetching examples: {e}", 'ERROR')
+            import traceback
+            log_to_blender(f"Traceback: {traceback.format_exc()}", 'ERROR')
+            return None
     
     @staticmethod
     def get_schema(runchat_id, api_key):
@@ -87,7 +150,7 @@ class RunChatAPI:
         
         try:
             log_to_blender("Sending POST request...")
-            response = requests.post(url, headers=headers, json=data, timeout=180)  # Increased timeout
+            response = requests.post(url, headers=headers, json=data, timeout=300)  # Increased to 5 minutes
             
             log_to_blender(f"Response received - Status: {response.status_code}")
             log_to_blender(f"Response headers: {dict(response.headers)}")
@@ -109,6 +172,12 @@ class RunChatAPI:
                         log_to_blender(f"Found {len(result['outputs'])} outputs")
                         for key, value in result['outputs'].items():
                             log_to_blender(f"  Output '{key}': {type(value).__name__} = {str(value)[:100]}...")
+                    if 'data' in result:
+                        log_to_blender(f"Found 'data' key with type: {type(result['data'])}")
+                        if isinstance(result['data'], list):
+                            log_to_blender(f"Data array contains {len(result['data'])} items")
+                        elif isinstance(result['data'], dict):
+                            log_to_blender(f"Data dict contains keys: {list(result['data'].keys())}")
                     if 'instance_id' in result:
                         log_to_blender(f"Instance ID: {result['instance_id']}")
                 else:
@@ -120,7 +189,7 @@ class RunChatAPI:
                 return None
                 
         except requests.exceptions.Timeout:
-            log_to_blender("Request timed out after 180 seconds", 'ERROR')
+            log_to_blender("Request timed out after 5 minutes", 'ERROR')
             return None
         except requests.exceptions.ConnectionError as e:
             log_to_blender(f"Connection error: {e}", 'ERROR')
@@ -170,4 +239,44 @@ class RunChatAPI:
             log_to_blender(f"Image upload error: {e}", 'ERROR')
             if hasattr(e, 'response') and e.response is not None:
                 log_to_blender(f"Response content: {e.response.text}", 'ERROR')
+            return None
+
+    @staticmethod
+    def poll_workflow_status(runchat_id, api_key, instance_id):
+        """Poll for workflow status and progress"""
+        if not runchat_id or not api_key or not instance_id:
+            log_to_blender("Runchat ID, API key, and instance ID are required for polling", 'ERROR')
+            return None
+        
+        url = f"{RunChatAPI.BASE_URL}/{runchat_id}/status"
+        headers = RunChatAPI.get_headers(api_key)
+        
+        data = {"runchat_instance_id": instance_id}
+        
+        log_to_blender(f"Polling workflow status - URL: {url}")
+        log_to_blender(f"Polling with instance ID: {instance_id}")
+        
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            log_to_blender(f"Polling response status: {response.status_code}")
+            
+            if response.status_code == 404:
+                # Status endpoint might not exist, return None to fall back to regular execution
+                return None
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            log_to_blender(f"Polling result: {result}")
+            
+            if isinstance(result, dict):
+                status = result.get('status', 'unknown')
+                progress = result.get('progress', 0)
+                log_to_blender(f"Workflow status: {status}, Progress: {progress}")
+                return result
+            
+            return None
+            
+        except requests.exceptions.RequestException as e:
+            log_to_blender(f"Error polling workflow status: {e}")
             return None
