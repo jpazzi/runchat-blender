@@ -1,11 +1,82 @@
-# RunChat Blender Plugin
+# Runchat Blender Plugin
 
-A comprehensive Blender plugin for integrating with RunChat workflows, providing a seamless interface to execute RunChat workflows directly from within Blender with full support for image uploads, viewport capture, and multiple output types.
+A comprehensive Blender plugin for integrating with Runchat workflows, providing a seamless interface to execute Runchat workflows directly from within Blender with full support for image uploads, viewport capture, and multiple output types.
 
-## Features
+## 🚀 Quick Start (30 seconds setup)
+
+**New to Runchat?** No problem! Here's what you need:
+1. A free Runchat account → [Sign up here](https://runchat.app/signup)
+2. Blender 3.0+ installed
+3. Python dependencies (auto-installed below)
+
+**Installation:**
+```bash
+cd runchat-blender
+python install.py
+```
+
+**First Run:**
+1. Open Blender → `Edit > Preferences > Add-ons` → Enable "Runchat Blender Plugin"
+2. Get your API key from [runchat.app/dashboard/keys](https://runchat.app/dashboard/keys)
+3. Paste it in the addon preferences
+4. Look for the Runchat panel in Properties → Scene
+5. Try a workflow from the examples that auto-load!
+
+## 💡 What Can You Do?
+
+Transform your Blender workflows with AI:
+- **Generate 3D models** from text descriptions or reference images
+- **Enhance textures** using AI image processing
+- **Auto-rig characters** with ML-powered rigging workflows  
+- **Create animations** from pose sequences
+- **Generate environments** from concept sketches
+- **Process render outputs** for post-effects and style transfer
+
+All without leaving Blender!
+
+## 📋 Prerequisites
+
+- **Blender**: Version 3.0 or higher
+- **Python**: 3.7+ (usually bundled with Blender)
+- **Internet Connection**: Required for API communication
+- **Runchat Account**: Free signup at [runchat.app](https://runchat.app)
+- **API Key**: Available in your dashboard after signup
+
+### Python Dependencies
+The following packages are auto-installed by `install.py`:
+- `requests` - For API communication
+- `Pillow` - For image processing
+- `json` - For data handling (usually built-in)
+
+## 📦 Installation
+
+### Method 1: Auto-Install (Recommended)
+```bash
+# Clone the repository
+git clone [repository-url]
+cd runchat-blender
+
+# Auto-install to Blender
+python install.py
+```
+
+### Method 2: Manual Install
+1. Download or clone this repository
+2. In Blender, go to `Edit > Preferences > Add-ons`
+3. Click `Install...` and select the addon folder or zip file
+4. Enable the "Runchat Blender Plugin" addon
+5. Configure your Runchat API key in the addon preferences
+
+### Verify Installation
+After installation, you should see:
+- A new "Runchat" panel in Properties → Scene
+- Example workflows automatically loaded
+- No error messages in the Blender console
+
+## ✨ Features
 
 ### Core Functionality
-- **Workflow Integration**: Load and execute RunChat workflows by ID
+- **Workflow Integration**: Load and execute Runchat workflows by ID
 - **Schema Loading**: Automatically fetch workflow schemas and configure inputs/outputs
 - **Real-time Progress Tracking**: Visual progress indicators during execution
 - **Instance Management**: Support for workflow instances and state management
@@ -15,7 +86,7 @@ A comprehensive Blender plugin for integrating with RunChat workflows, providing
 - **Image Inputs**: Multiple input methods:
   - Viewport capture from current 3D view
   - File selection from disk
-  - Automatic image upload to RunChat servers
+  - Automatic image upload to Runchat servers
 - **Upload Status Tracking**: Real-time feedback on image upload progress
 
 ### Output Handling
@@ -41,31 +112,27 @@ The addon now automatically loads curated Blender workflow examples on startup:
 
 The examples are fetched from `https://runchat.app/api/v1/examples?plugin=blender` and display workflows specifically curated for Blender users.
 
-## Installation
-
-1. Download or clone this repository
-2. In Blender, go to `Edit > Preferences > Add-ons`
-3. Click `Install...` and select the addon folder or zip file
-4. Enable the "RunChat Blender Plugin" addon
-5. Configure your RunChat API key in the addon preferences
-
-## Setup
+## ⚙️ Setup
 
 ### API Key Configuration
 
-1. Get your API key from [https://runchat.app/dashboard/keys](https://runchat.app/dashboard/keys)
-2. In Blender, go to `Edit > Preferences > Add-ons`
-3. Find "RunChat Blender Plugin" and expand its settings
-4. Enter your API key in the "RunChat API Key" field
+1. **Get your API key** from [https://runchat.app/dashboard/keys](https://runchat.app/dashboard/keys)
+2. **In Blender**, go to `Edit > Preferences > Add-ons`
+3. **Find** "Runchat Blender Plugin" and expand its settings
+4. **Enter** your API key in the "Runchat API Key" field
+5. **Save** preferences
 
-## Usage
+💡 **Tip:** Keep your API key secure and don't share it publicly!
 
-### Basic Workflow
+## 📖 Usage Guide
+
+### Your First Workflow
 
 1. **Load a Workflow**:
-   - Enter your RunChat workflow ID in the "RunChat ID" field
+   - Look at the auto-loaded examples in the panel
+   - Click "Use" on any example to try it instantly
+   - Or enter a custom Runchat workflow ID
    - Click the import icon to load the schema
-   - The workflow name and available inputs/outputs will be displayed
 
 2. **Configure Inputs**:
    - **Text Inputs**: Enter text directly in the value field
@@ -75,7 +142,7 @@ The examples are fetched from `https://runchat.app/api/v1/examples?plugin=blende
    - **Upload Progress**: Monitor image upload status in real-time
 
 3. **Execute Workflow**:
-   - Click "Execute RunChat" to run the workflow
+   - Click "Execute Runchat" to run the workflow
    - Monitor progress through the progress bar and status messages
    - View detailed progress for image uploads and execution
 
@@ -118,7 +185,7 @@ The plugin can automatically capture your current Blender viewport:
 - **Image Viewer**: Output images are automatically loaded into Blender's image editor
 - **Model Import**: GLTF models are imported with proper material handling
 
-## Workflow Integration
+## 🔧 Workflow Integration
 
 ### Supported Input Types
 - `text`, `string`: Text input fields
@@ -132,12 +199,36 @@ The plugin can automatically capture your current Blender viewport:
 - JSON data structures with mixed content
 
 ### API Integration
-The plugin uses the RunChat API v1:
+The plugin uses the Runchat API v1:
 - **Schema Endpoint**: `GET /{id}/schema` - Fetch workflow schema
 - **Execution Endpoint**: `POST /{id}` - Execute workflow with inputs
 - **Upload Endpoint**: `POST /upload/supabase` - Upload images
 
-## Development
+## 🔬 Development
+
+### Development Setup
+
+**Prerequisites:**
+- Python 3.7+
+- Blender 3.0+ with Python API access
+- Git for version control
+- Code editor (VS Code recommended)
+
+**Quick Dev Setup:**
+```bash
+# Clone and setup
+git clone [repository-url]
+cd runchat-blender
+
+# Install dev dependencies
+pip install -r requirements-dev.txt  # if available
+
+# Install plugin in development mode
+python install.py --dev
+
+# Enable Blender console for debugging
+# In Blender: Window > Toggle System Console
+```
 
 ### File Structure
 ```
@@ -165,11 +256,29 @@ runchat_blender_addon/
     └── blender_utils.py # Blender-specific utilities
 ```
 
-### Hot Reload Development
-Enable "Development Mode" in the addon preferences for:
-- Hot reload functionality
-- Additional debugging features
-- Development utilities
+### Contributing
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
+3. **Test** your changes thoroughly in Blender
+4. **Follow** Blender addon conventions and PEP 8 style guide
+5. **Add** tests for new functionality
+6. **Update** documentation as needed
+7. **Submit** a pull request
+
+### Testing
+
+```bash
+# Run unit tests (if available)
+python -m pytest tests/
+
+# Manual testing checklist:
+# - Install addon in clean Blender instance
+# - Test with different workflow types
+# - Verify error handling
+# - Check UI responsiveness
+# - Test with different Blender versions
+```
 
 ### API Integration Details
 
@@ -184,40 +293,67 @@ Outputs are processed based on data type and content:
 - Models: Imported as 3D objects with materials
 - Text: Displayed in panels or copied to clipboard
 
-## Troubleshooting
+#### Error Handling
+The plugin implements comprehensive error handling:
+- Network connectivity issues
+- API authentication failures
+- Invalid workflow IDs
+- Upload timeouts
+- Schema parsing errors
+
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **"Please set your RunChat API key"**
+1. **"Please set your Runchat API key"**
    - Ensure your API key is set in addon preferences
    - Verify the key is valid at [https://runchat.app/dashboard/keys](https://runchat.app/dashboard/keys)
+   - Check that you saved the preferences after entering the key
 
 2. **"Failed to load schema"**
-   - Check that the RunChat ID is correct
+   - Check that the Runchat ID is correct (try copying from browser URL)
    - Verify the workflow exists and is accessible
    - Check internet connection and firewall settings
+   - Try refreshing examples to test connectivity
 
 3. **"Upload failed"**
    - Ensure API key has upload permissions
-   - Check image file size and format
+   - Check image file size (max 10MB recommended)
    - Verify internet connection stability
+   - Try with a smaller test image
 
 4. **"Execution failed"**
    - Ensure all required inputs are provided
    - Check that input formats match the schema requirements
    - Verify uploaded images are accessible
+   - Check Blender console for detailed error messages
 
 5. **Viewport capture not working**
    - Ensure you have a valid 3D viewport active
-   - Try switching to a 3D view before capturing
+   - Try switching to Material Preview or Rendered view
    - Check that OpenGL rendering is supported
+   - Verify viewport has content to capture
+
+6. **Plugin not visible after installation**
+   - Check that the addon is enabled in preferences
+   - Look for the panel in Properties → Scene (not Object)
+   - Restart Blender if necessary
+   - Check console for registration errors
 
 ### Debug Information
-- Check Blender's console (`Window > Toggle System Console`) for detailed error messages
-- Enable "Advanced Settings" for additional debugging options
-- Use the example scripts for testing functionality
+- **Blender Console**: `Window > Toggle System Console` for detailed error messages
+- **Advanced Settings**: Enable for additional debugging options and instance management
+- **Log Files**: Check Blender's console output for API request/response details
+- **Test Connectivity**: Use the refresh examples button to verify API connection
 
-## API Reference
+### Getting Help
+
+- **Documentation**: [https://docs.runchat.app](https://docs.runchat.app)
+- **Community**: Join discussions on the Runchat community forums
+- **Issues**: Report bugs on the GitHub repository
+- **Feature Requests**: Submit ideas through the Runchat feedback system
+
+## 📚 API Reference
 
 ### Input Types
 - **Text**: `text_value` property for string inputs
@@ -235,13 +371,24 @@ Outputs are processed based on data type and content:
 - Workflow execution (0.6-1.0 progress)
 - Output processing (completion)
 
-## Support and Links
+### Workflow States
+- **Idle**: Ready for new workflow
+- **Loading**: Fetching schema
+- **Uploading**: Processing image uploads
+- **Executing**: Running workflow
+- **Processing**: Handling outputs
+- **Complete**: Workflow finished
+- **Error**: Something went wrong
+
+## 🔗 Support and Links
 
 - **Documentation**: [https://docs.runchat.app](https://docs.runchat.app)
-- **API Keys**: [https://runchat.app/dashboard/keys](https://runchat.app/dashboard/keys)
-- **RunChat Editor**: [https://runchat.app/editor](https://runchat.app/editor)
+- **Get API Keys**: [https://runchat.app/dashboard/keys](https://runchat.app/dashboard/keys)
+- **Runchat Editor**: [https://runchat.app/editor](https://runchat.app/editor)
 - **Workflow Gallery**: Browse public workflows at [https://runchat.app](https://runchat.app)
+- **Community**: [Community forums and Discord](https://runchat.app/community)
+- **Report Issues**: [GitHub Issues](https://github.com/[repo]/issues)
 
-## License
+## 📄 License
 
-This plugin is provided as-is for integration with RunChat workflows. Please refer to the RunChat terms of service for API usage guidelines. 
+This plugin is provided as-is for integration with Runchat workflows. Please refer to the Runchat terms of service for API usage guidelines. 
