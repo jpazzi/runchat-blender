@@ -253,47 +253,6 @@ class RUNCHAT_OT_execute(Operator):
                     else:
                         log_to_blender(f"Unknown data format type: {type(data_content)}", 'WARNING')
                 
-                # Fallback: try legacy 'outputs' format for backward compatibility
-                elif 'outputs' in result:
-                    log_to_blender(f"Processing {len(result['outputs'])} outputs from legacy format...")
-                    log_to_blender(f"Legacy outputs keys: {list(result['outputs'].keys())}")
-                    
-                    for i, (output_id, output_value) in enumerate(result['outputs'].items()):
-                        update_progress(0.85 + (i / len(result['outputs'])) * 0.1, f"Processing output {i+1}/{len(result['outputs'])}")
-                        
-                        log_to_blender(f"=== LEGACY OUTPUT: {output_id} ===")
-                        log_to_blender(f"Output value type: {type(output_value)}")
-                        log_to_blender(f"Output value: {str(output_value)[:200]}...")
-                        
-                        # Find matching output property
-                        matching_prop = None
-                        for output_prop in runchat_props.outputs:
-                            if output_prop.param_id == output_id:
-                                matching_prop = output_prop
-                                break
-                        
-                        if matching_prop:
-                            matching_prop.value = str(output_value)
-                            
-                            # Determine output type for better UI
-                            if isinstance(output_value, str):
-                                if output_value.startswith('http') and any(ext in output_value.lower() for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']):
-                                    matching_prop.output_type = 'image'
-                                elif output_value.startswith('http') and any(ext in output_value.lower() for ext in ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v']):
-                                    matching_prop.output_type = 'video'
-                                    log_to_blender(f"LEGACY DETECTED VIDEO OUTPUT! URL: {output_value}")
-                                elif output_value.startswith('http') and any(ext in output_value.lower() for ext in ['.gltf', '.glb', '.obj', '.fbx', '.dae', '.3ds', '.blend']):
-                                    matching_prop.output_type = 'model'
-                                else:
-                                    matching_prop.output_type = 'text'
-                            else:
-                                matching_prop.output_type = 'text'
-                                                            
-                            matching_prop.is_processed = True
-                            log_to_blender(f"Updated legacy output {output_id} with type {matching_prop.output_type}")
-                        else:
-                            log_to_blender(f"No matching legacy output property found for: {output_id}", 'WARNING')
-                            
                 else:
                     log_to_blender("No outputs found in result (no 'data' or 'outputs' key)")
                     log_to_blender(f"Available result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
