@@ -23,9 +23,11 @@ class RunChatAPI:
         }
     
     @staticmethod
-    def get_examples_for_plugin(plugin="blender"):
+    def get_examples_for_plugin(plugin="blender", version=None):
         """Get curated workflow examples for a specific plugin"""
         url = f"{RunChatAPI.EXAMPLES_URL}?plugin={plugin}"
+        if version:
+            url += f"&version={version}"
         
         log_to_blender(f"=== FETCHING EXAMPLES ===")
         log_to_blender(f"Plugin: {plugin}")

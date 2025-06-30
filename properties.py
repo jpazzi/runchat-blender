@@ -67,6 +67,29 @@ class RunChatProperties(PropertyGroup):
     examples_loaded: BoolProperty(name="Examples Loaded", default=False)
     examples_loading: BoolProperty(name="Examples Loading", default=False)
     
+    # Version checking properties (added in v1.2.0)
+    # These properties have safe defaults to ensure backwards compatibility
+    latest_version: StringProperty(
+        name="Latest Version", 
+        default="",
+        description="Latest available plugin version"
+    )
+    update_available: BoolProperty(
+        name="Update Available", 
+        default=False,
+        description="Whether a plugin update is available"
+    )
+    download_url: StringProperty(
+        name="Download URL", 
+        default="",
+        description="URL to download the latest plugin version"
+    )
+    version_checked: BoolProperty(
+        name="Version Checked", 
+        default=False,
+        description="Whether version checking has been performed"
+    )
+    
     auto_save_images: BoolProperty(name="Auto Save Images", description="Automatically save output images to disk", default=True)
     image_save_path: StringProperty(name="Image Save Path", description="Directory to save output images", default="~/Desktop/Runchat_outputs/", subtype='DIR_PATH')
     video_save_path: StringProperty(name="Video Save Path", description="Directory to save output videos", default="~/Desktop/Runchat_outputs/", subtype='DIR_PATH')

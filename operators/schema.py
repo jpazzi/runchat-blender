@@ -393,8 +393,18 @@ class RUNCHAT_OT_load_examples(Operator):
         
         try:
             print("Calling API to fetch examples...")
-            # Fetch examples from API - simple approach
-            examples_data = api.RunChatAPI.get_examples_for_plugin("blender")
+            # Get current version from bl_info (with fallback)
+            current_version = None
+            try:
+                from .. import bl_info
+                current_version = ".".join(map(str, bl_info["version"]))
+                print(f"Current plugin version: {current_version}")
+            except Exception as e:
+                print(f"Could not determine plugin version: {e}")
+                current_version = None
+            
+            # Fetch examples from API with version info (only if we have version)
+            examples_data = api.RunChatAPI.get_examples_for_plugin("blender", current_version)
             
             print(f"API returned: {examples_data}")
             print(f"API data type: {type(examples_data)}")
@@ -410,6 +420,26 @@ class RUNCHAT_OT_load_examples(Operator):
                     example_prop.example_id = example_data.get('id', '')
                     example_prop.name = example_data.get('name', 'Unknown Example')
                     print(f"Added: '{example_prop.name}' (ID: '{example_prop.example_id}')")
+                
+                # Handle version information (gracefully handle missing version_info for backwards compatibility)
+                try:
+                    if 'version_info' in examples_data:
+                        version_info = examples_data['version_info']
+                        runchat_props.latest_version = version_info.get('latest_version', '')
+                        runchat_props.update_available = version_info.get('update_available', False)
+                        runchat_props.download_url = version_info.get('download_url', '')
+                        runchat_props.version_checked = True
+                        
+                        print(f"Version check: Current={current_version}, Latest={runchat_props.latest_version}, Update Available={runchat_props.update_available}")
+                        
+                        if runchat_props.update_available:
+                            self.report({'WARNING'}, f"Plugin update available: v{runchat_props.latest_version}")
+                            print(f"🔄 Plugin update available: v{runchat_props.latest_version}")
+                    else:
+                        print("No version_info in API response - running against older API version")
+                except Exception as version_error:
+                    print(f"Error processing version info (non-critical): {version_error}")
+                    # Don't fail the entire operation if version checking fails
                 
                 runchat_props.examples_loaded = True
                 runchat_props.examples_loading = False
@@ -466,9 +496,38 @@ class RUNCHAT_OT_use_example(Operator):
         return {'FINISHED'}
 
 
+class RUNCHAT_OT_download_update(Operator):
+    """Download the latest plugin update"""
+    bl_idname = "runchat.download_update"
+    bl_label = "Download Update"
+    bl_description = "Open download page for the latest plugin version"
+    
+    def execute(self, context):
+        scene = context.scene
+        runchat_props = scene.runchat_properties
+        
+        if not runchat_props.download_url:
+            self.report({'ERROR'}, "No download URL available")
+            return {'CANCELLED'}
+        
+        # Open download URL in browser
+        import webbrowser
+        try:
+            webbrowser.open(runchat_props.download_url)
+            self.report({'INFO'}, f"Opened download page for v{runchat_props.latest_version}")
+            print(f"🌐 Opened download URL: {runchat_props.download_url}")
+        except Exception as e:
+            self.report({'ERROR'}, f"Failed to open download page: {str(e)}")
+            print(f"❌ Failed to open download URL: {e}")
+            return {'CANCELLED'}
+        
+        return {'FINISHED'}
+
+
 classes = [
     RUNCHAT_OT_load_schema,
     RUNCHAT_OT_test_connection,
     RUNCHAT_OT_load_examples,
     RUNCHAT_OT_use_example,
+    RUNCHAT_OT_download_update,
 ] 

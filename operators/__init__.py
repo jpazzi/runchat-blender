@@ -30,6 +30,7 @@ def register():
     bpy.utils.register_class(schema.RUNCHAT_OT_load_schema)
     bpy.utils.register_class(schema.RUNCHAT_OT_load_examples)
     bpy.utils.register_class(schema.RUNCHAT_OT_use_example)
+    bpy.utils.register_class(schema.RUNCHAT_OT_download_update)
     
     # Capture operators
     bpy.utils.register_class(capture.RUNCHAT_OT_preview_viewport)
@@ -100,6 +101,7 @@ def unregister():
     bpy.utils.unregister_class(capture.RUNCHAT_OT_preview_viewport)
     
     # Schema operators
+    bpy.utils.unregister_class(schema.RUNCHAT_OT_download_update)
     bpy.utils.unregister_class(schema.RUNCHAT_OT_use_example)
     bpy.utils.unregister_class(schema.RUNCHAT_OT_load_examples)
     bpy.utils.unregister_class(schema.RUNCHAT_OT_load_schema)

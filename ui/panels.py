@@ -22,6 +22,41 @@ class RUNCHAT_PT_main_panel(Panel):
         scene = context.scene
         runchat_props = scene.runchat_properties
         
+        # Version Update section (prominent placement at top)
+        # Use getattr with defaults for backwards compatibility
+        version_checked = getattr(runchat_props, 'version_checked', False)
+        update_available = getattr(runchat_props, 'update_available', False)
+        
+        if version_checked and update_available:
+            # Create a prominent update notification box
+            update_box = layout.box()
+            update_box.alert = True  # Makes the box highlighted in red
+            
+            # Main header with eye-catching icon
+            update_header = update_box.row()
+            update_header.scale_y = 1.2  # Make it taller
+            update_header.label(text="Runchat Plugin Update Available!", icon="ERROR")
+            
+            # Version information
+            version_row = update_box.row()
+            latest_version = getattr(runchat_props, 'latest_version', 'Unknown')
+            version_row.label(text=f"Latest Version: v{latest_version} - New features & fixes available")
+            
+            # Prominent download button
+            download_row = update_box.row()
+            download_row.scale_y = 1.6  # Make button bigger
+            download_op = download_row.operator("runchat.download_update", text="📥 Download Latest Package", icon="IMPORT")
+            download_row.alert = True  # Make button highlighted in red
+            
+            # Additional helpful text
+            help_row = update_box.row()
+            help_row.scale_y = 0.8
+            help_row.label(text="Click to download and manually install the new version")
+            
+            # Separator after update notification
+            layout.separator()
+            layout.separator()
+
         # Workflow Examples section
         examples_box = layout.box()
         examples_header = examples_box.row()
@@ -455,6 +490,31 @@ class RUNCHAT_PT_help_panel(Panel):
     
     def draw(self, context):
         layout = self.layout
+        scene = context.scene
+        runchat_props = scene.runchat_properties
+        
+        # Version information (display only, no manual actions needed)
+        version_box = layout.box()
+        version_box.label(text="Plugin Version:", icon="INFO")
+        
+        # Get current version from bl_info
+        try:
+            from .. import bl_info
+            current_version = ".".join(map(str, bl_info["version"]))
+            version_box.label(text=f"Installed: v{current_version}")
+        except:
+            version_box.label(text="Installed: Unknown")
+        
+        # Show update status if checked (but no manual action buttons)
+        if runchat_props.version_checked:
+            if runchat_props.latest_version:
+                version_box.label(text=f"Latest Available: v{runchat_props.latest_version}")
+            
+            if not runchat_props.update_available:
+                status_row = version_box.row()
+                status_row.label(text="✅ Up to date", icon="CHECKMARK")
+        
+        layout.separator()
         
         # Help section
         help_box = layout.box()

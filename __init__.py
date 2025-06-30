@@ -3,7 +3,7 @@
 bl_info = {
     "name": "Runchat Blender Addon",
     "author": "Runchat",
-    "version": (1, 1, 0),  # Updated version for refactored code
+    "version": (1, 1, 0), 
     "blender": (3, 0, 0),
     "location": "Properties > Scene Properties > Runchat",
     "description": "Integrates Runchat workflows directly into Blender",
