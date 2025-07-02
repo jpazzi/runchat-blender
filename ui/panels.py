@@ -263,8 +263,6 @@ class RUNCHAT_PT_inputs_panel(Panel):
             viewport_section.label(text="Viewport Capture:", icon="CAMERA_DATA")
             viewport_row = viewport_section.row()
             viewport_row.operator("runchat.upload_viewport", text="Capture & Upload Viewport", icon="CAMERA_DATA").input_index = index
-            preview_row = viewport_section.row()
-            preview_row.operator("runchat.preview_viewport", text="Preview Viewport Only", icon="HIDE_OFF").input_index = index
             
             # File upload option
             file_section = upload_content.box()
@@ -275,8 +273,6 @@ class RUNCHAT_PT_inputs_panel(Panel):
             if input_prop.file_path:
                 upload_row = file_section.row()
                 upload_row.operator("runchat.upload_file", text="Upload Selected File", icon="EXPORT").input_index = index
-                preview_row = file_section.row()
-                preview_row.operator("runchat.preview_image", text="Preview File", icon="FILE_IMAGE").input_index = index
             
             # Upload status
             if input_prop.upload_status:
