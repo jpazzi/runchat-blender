@@ -7,13 +7,26 @@ import tempfile
 import io
 from typing import Any, Dict, Optional
 
-# Try to import PIL/Pillow, fallback gracefully if not available
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-    print("PIL/Pillow not available, using basic image handling")
+# Import dependencies lazily to avoid path issues during module loading
+_pil_image = None
+_pil_available = None
+_requests = None
+
+def get_pil_module():
+    """Get the PIL module, importing it lazily"""
+    global _pil_image, _pil_available
+    if _pil_image is None:
+        from .dependencies import get_pil
+        _pil_image, _pil_available = get_pil()
+    return _pil_image, _pil_available
+
+def get_requests_module():
+    """Get the requests module, importing it lazily"""
+    global _requests
+    if _requests is None:
+        from .dependencies import get_requests
+        _requests, _ = get_requests()
+    return _requests
 
 
 def image_to_base64(image_path: str, quality: int = 90) -> Optional[str]:
@@ -23,12 +36,13 @@ def image_to_base64(image_path: str, quality: int = 90) -> Optional[str]:
         return None
     
     try:
+        PIL_Image, PIL_AVAILABLE = get_pil_module()
         if PIL_AVAILABLE:
             # Load and potentially compress the image
-            with Image.open(image_path) as img:
+            with PIL_Image.open(image_path) as img:
                 # Convert to RGB if necessary (removes alpha channel)
                 if img.mode in ('RGBA', 'LA', 'P'):
-                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    rgb_img = PIL_Image.new('RGB', img.size, (255, 255, 255))
                     if img.mode == 'P':
                         img = img.convert('RGBA')
                     rgb_img.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
@@ -175,8 +189,6 @@ def load_image_from_url(url: str, image_name: str = "RunChat_Image", operator=No
     
     temp_path = None
     try:
-        import requests
-        
         report_info(f"Downloading image from URL: {url[:100]}...")
         
         # Determine file extension from URL
@@ -198,7 +210,7 @@ def load_image_from_url(url: str, image_name: str = "RunChat_Image", operator=No
         report_info(f"Detected file extension: {file_extension}")
         
         # Download the image
-        response = requests.get(url, timeout=30)
+        response = get_requests_module().get(url, timeout=30)
         response.raise_for_status()
         
         if len(response.content) == 0:

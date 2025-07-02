@@ -1,9 +1,26 @@
 # __init__.py
 
+# Add bundled dependencies to path BEFORE any other imports
+import sys
+import os
+
+# Get the addon directory and add lib folder to Python path
+addon_dir = os.path.dirname(__file__)
+lib_dir = os.path.join(addon_dir, "lib")
+
+# Add lib directory to path if it exists and isn't already there
+if os.path.exists(lib_dir) and lib_dir not in sys.path:
+    sys.path.insert(0, lib_dir)
+    print(f"[Runchat] Added bundled dependencies: {lib_dir}")
+elif not os.path.exists(lib_dir):
+    print(f"[Runchat] WARNING: Bundled dependencies not found at {lib_dir}")
+    print("[Runchat] This addon requires bundled dependencies to function properly!")
+    print("[Runchat] Please download a properly bundled version of the addon.")
+
 bl_info = {
     "name": "Runchat Blender Addon",
     "author": "Runchat",
-    "version": (1, 1, 0), 
+    "version": (1, 2, 0), 
     "blender": (3, 0, 0),
     "location": "Properties > Scene Properties > Runchat",
     "description": "Integrates Runchat workflows directly into Blender",

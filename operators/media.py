@@ -4,13 +4,16 @@ import bpy
 import webbrowser
 import os
 import tempfile
-import requests
 import time
 from bpy.types import Operator
 from bpy.props import IntProperty, StringProperty
 
 from .. import utils
 from .. import preferences
+from ..utils.dependencies import get_requests
+
+# Get bundled requests
+requests, _ = get_requests()
 
 
 class RUNCHAT_OT_view_image(Operator):

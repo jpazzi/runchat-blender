@@ -544,8 +544,9 @@ class RUNCHAT_PT_execution_panel(Panel):
         exec_row.scale_y = 1.5
         
         if is_executing:
-            # Show cancel button when executing
-            exec_row.operator("runchat.cancel_execution", text="Cancel Execution", icon="CANCEL")
+            # Show status when executing (no cancel button since operator doesn't exist)
+            exec_row.alert = True
+            exec_row.label(text="Executing Workflow...", icon="TIME")
         else:
             # Show execute button when not executing
             exec_row.operator("runchat.execute", text="Execute Runchat", icon="PLAY")
@@ -650,7 +651,11 @@ class RUNCHAT_PT_help_panel(Panel):
         # API testing row
         api_row = debug_box.row()
         api_row.operator("runchat.test_api_connection", text="Test API", icon="LINKED")
-        api_row.operator("runchat.open_info_log", text="Show Info Log", icon="INFO")
+        api_row.operator("runchat.test_dependencies", text="Test Dependencies", icon="SYSTEM")
+        
+        # Info log row
+        info_row = debug_box.row()
+        info_row.operator("runchat.open_info_log", text="Show Info Log", icon="INFO")
 
 
 

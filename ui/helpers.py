@@ -19,9 +19,6 @@ def _label_multiline(context, text, parent):
 def draw_description_line(layout, line, context=None):
     """Draw a description line with markdown link support and proper multiline wrapping"""
     
-    # Debug: Print the line being processed
-    print(f"[RunChat Debug] Processing description line: '{line}'")
-    
     # Find all markdown links in the format [text](url)
     # More robust pattern that handles optional whitespace and empty groups
     link_pattern = r'\[([^\]]*)\]\(([^)]*)\)'
@@ -32,13 +29,11 @@ def draw_description_line(layout, line, context=None):
     for link in links:
         link_text = link.group(1).strip() if link.group(1) else ""
         link_url = link.group(2).strip() if link.group(2) else ""
-        print(f"[RunChat Debug] Found link: text='{link_text}', url='{link_url}'")
         # Only include links that have at least some text or URL
         if link_text or link_url:
             valid_links.append(link)
     
     links = valid_links
-    print(f"[RunChat Debug] Valid links found: {len(links)}")
     
     if not links:
         # No links, use the improved multiline text display

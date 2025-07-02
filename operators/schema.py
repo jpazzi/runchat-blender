@@ -254,14 +254,15 @@ class RUNCHAT_OT_test_connection(Operator):
         try:
             runchat_props.status = "Testing connection..."
             
-            # First, test if requests module is available
+            # Load bundled requests
             try:
-                import requests
-                print("✅ Requests module loaded successfully")
+                from ..utils.dependencies import get_requests
+                requests, _ = get_requests()
+                print("✅ Bundled requests loaded successfully")
             except ImportError as e:
-                runchat_props.status = "Missing requests module"
-                self.report({'ERROR'}, "Python requests module not available in Blender")
-                print(f"❌ Import error: {e}")
+                runchat_props.status = "Missing bundled dependencies"
+                self.report({'ERROR'}, "Missing bundled dependencies - download bundled version")
+                print(f"❌ Bundled requests error: {e}")
                 return {'CANCELLED'}
             
             # Test basic internet connectivity first
@@ -320,45 +321,53 @@ class RUNCHAT_OT_test_connection(Operator):
                 self.report({'ERROR'}, f"❌ Connection failed: HTTP {response.status_code}")
                 print(f"⚠️ Unexpected HTTP status: {response.status_code}")
                 
-        except requests.exceptions.SSLError as e:
-            print(f"🔐 SSL Error: {e}")
-            runchat_props.status = "SSL certificate error"
-            self.report({'ERROR'}, "SSL certificate error - try updating certificates")
-            
-        except requests.exceptions.Timeout:
-            print("⏰ Request timed out")
-            runchat_props.status = "Connection timed out"
-            self.report({'ERROR'}, "Connection timed out - server may be slow")
-            
-        except requests.exceptions.ConnectionError as e:
-            print(f"🌐 Connection Error: {e}")
-            # More specific error handling
-            if "Name or service not known" in str(e):
-                runchat_props.status = "DNS resolution failed"
-                self.report({'ERROR'}, "DNS resolution failed - check internet/DNS settings")
-            elif "Connection refused" in str(e):
-                runchat_props.status = "Connection refused by server"
-                self.report({'ERROR'}, "Connection refused - server may be down")
-            elif "No route to host" in str(e):
-                runchat_props.status = "Network routing issue"
-                self.report({'ERROR'}, "Network routing issue - check firewall/proxy")
-            else:
-                runchat_props.status = "Network connection error"
-                self.report({'ERROR'}, "Network connection error - check internet connection")
-            
-        except requests.exceptions.ProxyError as e:
-            print(f"🔀 Proxy Error: {e}")
-            runchat_props.status = "Proxy configuration error"
-            self.report({'ERROR'}, "Proxy error - check proxy settings")
-            
         except Exception as e:
-            print(f"💥 Unexpected error: {e}")
-            print(f"   Error type: {type(e).__name__}")
-            import traceback
-            print(f"   Traceback: {traceback.format_exc()}")
+            error_str = str(e).lower()
             
-            runchat_props.status = f"Unexpected error: {str(e)}"
-            self.report({'ERROR'}, f"Unexpected error: {str(e)}")
+            # Handle SSL errors
+            if "ssl" in error_str or "certificate" in error_str:
+                print(f"🔐 SSL Error: {e}")
+                runchat_props.status = "SSL certificate error"
+                self.report({'ERROR'}, "SSL certificate error - try updating certificates")
+            
+            # Handle timeout errors
+            elif "timeout" in error_str or "timed out" in error_str:
+                print("⏰ Request timed out")
+                runchat_props.status = "Connection timed out"
+                self.report({'ERROR'}, "Connection timed out - server may be slow")
+            
+            # Handle connection errors
+            elif "connection" in error_str or "network" in error_str:
+                print(f"🌐 Connection Error: {e}")
+                # More specific error handling
+                if "name or service not known" in error_str:
+                    runchat_props.status = "DNS resolution failed"
+                    self.report({'ERROR'}, "DNS resolution failed - check internet/DNS settings")
+                elif "connection refused" in error_str:
+                    runchat_props.status = "Connection refused by server"
+                    self.report({'ERROR'}, "Connection refused - server may be down")
+                elif "no route to host" in error_str:
+                    runchat_props.status = "Network routing issue"
+                    self.report({'ERROR'}, "Network routing issue - check firewall/proxy")
+                else:
+                    runchat_props.status = "Network connection error"
+                    self.report({'ERROR'}, "Network connection error - check internet connection")
+            
+            # Handle proxy errors
+            elif "proxy" in error_str:
+                print(f"🔀 Proxy Error: {e}")
+                runchat_props.status = "Proxy configuration error"
+                self.report({'ERROR'}, "Proxy error - check proxy settings")
+            
+            # Handle other errors
+            else:
+                print(f"💥 Unexpected error: {e}")
+                print(f"   Error type: {type(e).__name__}")
+                import traceback
+                print(f"   Traceback: {traceback.format_exc()}")
+                
+                runchat_props.status = f"Unexpected error: {str(e)}"
+                self.report({'ERROR'}, f"Unexpected error: {str(e)}")
         
         return {'FINISHED'}
 
@@ -373,17 +382,6 @@ class RUNCHAT_OT_load_examples(Operator):
         runchat_props = scene.runchat_properties
         
         print("=== LOADING BLENDER EXAMPLES ===")
-        
-        # Check if requests module is available
-        try:
-            import requests
-            print("✅ Requests module available")
-        except ImportError as e:
-            print(f"❌ Requests module not available: {e}")
-            runchat_props.examples_loaded = False
-            runchat_props.examples_loading = False
-            self.report({'ERROR'}, "Python requests module not available in Blender")
-            return {'CANCELLED'}
         
         # Set loading state
         runchat_props.examples_loading = True

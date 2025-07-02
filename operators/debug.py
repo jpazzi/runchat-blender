@@ -2,11 +2,14 @@
 
 import bpy
 import os
-import requests
 from bpy.types import Operator
 
 from .. import api
 from .. import preferences
+from ..utils.dependencies import get_requests, check_dependencies
+
+# Get bundled requests
+requests, _ = get_requests()
 
 
 def log_to_blender(message, level='INFO'):
@@ -161,8 +164,71 @@ class RUNCHAT_OT_clear_workflow(Operator):
         return {'FINISHED'}
 
 
+class RUNCHAT_OT_test_dependencies(Operator):
+    """Test and report on bundled dependencies"""
+    bl_idname = "runchat.test_dependencies" 
+    bl_label = "Test Dependencies"
+    bl_description = "Test availability and functionality of bundled dependencies"
+    
+    def execute(self, context):
+        log_to_blender("=== BUNDLED DEPENDENCY TEST ===")
+        
+        try:
+            # Check bundled dependencies
+            deps = check_dependencies()
+            
+            # Report results
+            requests_status = deps['requests_backend']
+            pil_status = "Available" if deps['pil_available'] else "Not available"
+            
+            log_to_blender(f"Bundled Requests: {requests_status}")
+            log_to_blender(f"Bundled PIL/Pillow: {pil_status}")
+            
+            log_to_blender("✅ Using bundled requests library")
+            log_to_blender("✅ Using bundled PIL/Pillow library")
+            
+            # Test basic HTTP functionality
+            try:
+                log_to_blender("Testing bundled requests functionality...")
+                response = deps['requests'].get("https://httpbin.org/get", timeout=10)
+                log_to_blender(f"✅ HTTP test successful: {response.status_code}")
+            except Exception as e:
+                log_to_blender(f"❌ HTTP test failed: {e}")
+                raise
+            
+            # Test PIL functionality
+            try:
+                log_to_blender("Testing bundled PIL functionality...")
+                # Create a small test image
+                test_img = deps['pil'].new('RGB', (10, 10), color='red')
+                log_to_blender("✅ PIL test successful")
+            except Exception as e:
+                log_to_blender(f"❌ PIL test failed: {e}")
+                raise
+            
+            # Overall status
+            status = "All bundled dependencies working perfectly"
+            self.report({'INFO'}, status)
+            log_to_blender(f"Overall status: {status}")
+            
+        except ImportError as e:
+            log_to_blender(f"❌ CRITICAL: Missing bundled dependencies: {e}")
+            log_to_blender("This addon requires bundled dependencies in the lib/ folder")
+            log_to_blender("Please download a properly bundled version of the addon")
+            self.report({'ERROR'}, "Missing bundled dependencies - download bundled version")
+            return {'CANCELLED'}
+        except Exception as e:
+            log_to_blender(f"❌ Dependency test failed: {e}")
+            self.report({'ERROR'}, f"Dependency test failed: {e}")
+            return {'CANCELLED'}
+        
+        log_to_blender("=== BUNDLED DEPENDENCY TEST COMPLETE ===")
+        return {'FINISHED'}
+
+
 classes = [
     RUNCHAT_OT_test_api_connection,
     RUNCHAT_OT_open_info_log,
     RUNCHAT_OT_clear_workflow,
+    RUNCHAT_OT_test_dependencies,
 ] 

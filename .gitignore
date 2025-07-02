@@ -1,18 +1,14 @@
-# Byte-compiled / optimized / DLL files
+# Bundled dependencies (generated during build)
+lib/
+
+# Build artifacts (within addon directory)
+build/
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -73,16 +69,17 @@ Desktop.ini
 *.blend2
 *.log
 
-# Build artifacts
-*.zip
-runchat_blender.zip
-
 # Temporary files
 *.tmp
-*.temp
 *.bak
 
 # Development files
 test_*.py
 debug_*.py
-scratch_*.py 
+scratch_*.py
+
+# OS generated files
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db 

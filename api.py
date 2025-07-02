@@ -1,7 +1,18 @@
 # api.py
 
-import requests
 import bpy
+
+# Import requests lazily when needed to avoid import issues during module loading
+_requests = None
+
+def get_requests_module():
+    """Get the requests module, importing it lazily"""
+    global _requests
+    if _requests is None:
+        from .utils.dependencies import get_requests
+        _requests, _ = get_requests()
+        print("[Runchat API] Using bundled requests library")
+    return _requests
 
 
 def log_to_blender(message, level='INFO'):
@@ -33,9 +44,21 @@ class RunChatAPI:
         log_to_blender(f"Plugin: {plugin}")
         log_to_blender(f"URL: {url}")
         
+        # Get requests module once and reuse
+        requests = get_requests_module()
+        
         try:
             log_to_blender("Making request to examples API...")
-            response = requests.get(url, timeout=30)
+            headers = {
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip, deflate',  # Avoid zstd compression
+                'User-Agent': 'Runchat-Blender/1.1.0',
+                'Cache-Control': 'no-cache'  # Try to bypass caching
+            }
+            
+            # Use session for better connection handling
+            session = requests.Session()
+            response = session.get(url, headers=headers, timeout=30)
             log_to_blender(f"Response status: {response.status_code}")
             log_to_blender(f"Response headers: {dict(response.headers)}")
             
@@ -46,8 +69,57 @@ class RunChatAPI:
             
             response.raise_for_status()
             
-            log_to_blender("Parsing JSON response...")
-            result = response.json()
+            # Handle response content more robustly
+            try:
+                # Check raw content first
+                raw_content = response.content
+                log_to_blender(f"Raw content length: {len(raw_content)} bytes")
+                log_to_blender(f"Content encoding: {response.headers.get('Content-Encoding', 'none')}")
+                
+                if not raw_content:
+                    log_to_blender("Empty raw content received", 'ERROR')
+                    return None
+                
+                # Try to get text content
+                try:
+                    response_text = response.text
+                    log_to_blender(f"Response text length: {len(response_text)}")
+                    log_to_blender(f"Response text preview: {response_text[:200]}...")
+                except Exception as text_error:
+                    log_to_blender(f"Failed to decode response text: {text_error}", 'ERROR')
+                    
+                    # Fallback: try to decode raw content as UTF-8
+                    try:
+                        response_text = raw_content.decode('utf-8')
+                        log_to_blender(f"Fallback decoded text length: {len(response_text)}")
+                        log_to_blender(f"Fallback text preview: {response_text[:200]}...")
+                    except Exception as fallback_error:
+                        log_to_blender(f"Fallback decode also failed: {fallback_error}", 'ERROR')
+                        return None
+                
+                if not response_text or not response_text.strip():
+                    log_to_blender("Empty response text after decoding", 'ERROR')
+                    return None
+                
+                log_to_blender("Parsing JSON response...")
+                # Try parsing JSON with error handling
+                try:
+                    result = response.json()
+                except ValueError as json_error:
+                    log_to_blender(f"Primary JSON parsing failed: {json_error}", 'ERROR')
+                    # Try parsing from the decoded text
+                    import json
+                    try:
+                        result = json.loads(response_text)
+                        log_to_blender("Fallback JSON parsing succeeded", 'INFO')
+                    except Exception as fallback_json_error:
+                        log_to_blender(f"Fallback JSON parsing failed: {fallback_json_error}", 'ERROR')
+                        log_to_blender(f"Problem text: {response_text[:500]}", 'ERROR')
+                        return None
+                        
+            except Exception as content_error:
+                log_to_blender(f"Error handling response content: {content_error}", 'ERROR')
+                return None
             log_to_blender(f"Parsed JSON successfully. Type: {type(result)}")
             
             if isinstance(result, dict):
@@ -96,8 +168,17 @@ class RunChatAPI:
         url = f"{RunChatAPI.BASE_URL}/{runchat_id}/schema"
         headers = RunChatAPI.get_headers(api_key)
         
+        # Add compression headers to avoid zstd
+        headers.update({
+            'Accept-Encoding': 'gzip, deflate',  # Avoid zstd compression
+            'Cache-Control': 'no-cache'  # Try to bypass caching
+        })
+        
         log_to_blender(f"Making API request to: {url}")
         log_to_blender(f"Headers: {headers}")
+        
+        # Get requests module once and reuse
+        requests = get_requests_module()
         
         try:
             log_to_blender("Sending GET request for schema...")
@@ -106,7 +187,55 @@ class RunChatAPI:
             log_to_blender(f"Response headers: {dict(response.headers)}")
             
             response.raise_for_status()
-            result = response.json()
+            
+            # Handle response content robustly (same as examples)
+            try:
+                # Check raw content first
+                raw_content = response.content
+                log_to_blender(f"Raw content length: {len(raw_content)} bytes")
+                log_to_blender(f"Content encoding: {response.headers.get('Content-Encoding', 'none')}")
+                
+                if not raw_content:
+                    log_to_blender("Empty raw content received", 'ERROR')
+                    return None
+                
+                # Try to get text content
+                try:
+                    response_text = response.text
+                    log_to_blender(f"Response text length: {len(response_text)}")
+                except Exception as text_error:
+                    log_to_blender(f"Failed to decode response text: {text_error}", 'ERROR')
+                    
+                    # Fallback: try to decode raw content as UTF-8
+                    try:
+                        response_text = raw_content.decode('utf-8')
+                        log_to_blender(f"Fallback decoded text length: {len(response_text)}")
+                    except Exception as fallback_error:
+                        log_to_blender(f"Fallback decode also failed: {fallback_error}", 'ERROR')
+                        return None
+                
+                if not response_text or not response_text.strip():
+                    log_to_blender("Empty response text after decoding", 'ERROR')
+                    return None
+                
+                # Try parsing JSON with error handling
+                try:
+                    result = response.json()
+                except ValueError as json_error:
+                    log_to_blender(f"Primary JSON parsing failed: {json_error}", 'ERROR')
+                    # Try parsing from the decoded text
+                    import json
+                    try:
+                        result = json.loads(response_text)
+                        log_to_blender("Fallback JSON parsing succeeded", 'INFO')
+                    except Exception as fallback_json_error:
+                        log_to_blender(f"Fallback JSON parsing failed: {fallback_json_error}", 'ERROR')
+                        return None
+                        
+            except Exception as content_error:
+                log_to_blender(f"Error handling response content: {content_error}", 'ERROR')
+                return None
+            
             log_to_blender(f"Response JSON keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
             log_to_blender("Schema loaded successfully")
             return result
@@ -138,6 +267,12 @@ class RunChatAPI:
         url = f"{RunChatAPI.BASE_URL}/{runchat_id}"
         headers = RunChatAPI.get_headers(api_key)
         
+        # Add compression headers to avoid zstd
+        headers.update({
+            'Accept-Encoding': 'gzip, deflate',  # Avoid zstd compression
+            'Cache-Control': 'no-cache'  # Try to bypass caching
+        })
+        
         data = {}
         if inputs:
             data["inputs"] = inputs
@@ -149,6 +284,9 @@ class RunChatAPI:
         log_to_blender(f"Headers: {headers}")
         log_to_blender(f"Data: {data}")
         log_to_blender(f"Payload size: {len(str(data))} characters")
+        
+        # Get requests module once and reuse
+        requests = get_requests_module()
         
         try:
             log_to_blender("Sending POST request...")
@@ -164,31 +302,77 @@ class RunChatAPI:
             
             response.raise_for_status()
             
+            # Handle response content robustly (same as other methods)
             try:
-                result = response.json()
-                log_to_blender("Response parsed successfully")
-                log_to_blender(f"Result type: {type(result)}")
-                if isinstance(result, dict):
-                    log_to_blender(f"Result keys: {list(result.keys())}")
-                    if 'outputs' in result:
-                        log_to_blender(f"Found {len(result['outputs'])} outputs")
-                        for key, value in result['outputs'].items():
-                            log_to_blender(f"  Output '{key}': {type(value).__name__} = {str(value)[:100]}...")
-                    if 'data' in result:
-                        log_to_blender(f"Found 'data' key with type: {type(result['data'])}")
-                        if isinstance(result['data'], list):
-                            log_to_blender(f"Data array contains {len(result['data'])} items")
-                        elif isinstance(result['data'], dict):
-                            log_to_blender(f"Data dict contains keys: {list(result['data'].keys())}")
-                    if 'instance_id' in result:
-                        log_to_blender(f"Instance ID: {result['instance_id']}")
-                else:
-                    log_to_blender(f"Result content: {result}")
-                return result
-            except ValueError as json_error:
-                log_to_blender(f"JSON decode error: {json_error}", 'ERROR')
-                log_to_blender(f"Raw response (first 500 chars): {response.text[:500]}", 'ERROR')
+                # Check raw content first
+                raw_content = response.content
+                log_to_blender(f"Raw content length: {len(raw_content)} bytes")
+                log_to_blender(f"Content encoding: {response.headers.get('Content-Encoding', 'none')}")
+                
+                if not raw_content:
+                    log_to_blender("Empty raw content received", 'ERROR')
+                    return None
+                
+                # Try to get text content
+                try:
+                    response_text = response.text
+                    log_to_blender(f"Response text length: {len(response_text)}")
+                    log_to_blender(f"Response text preview: {response_text[:200]}...")
+                except Exception as text_error:
+                    log_to_blender(f"Failed to decode response text: {text_error}", 'ERROR')
+                    
+                    # Fallback: try to decode raw content as UTF-8
+                    try:
+                        response_text = raw_content.decode('utf-8')
+                        log_to_blender(f"Fallback decoded text length: {len(response_text)}")
+                        log_to_blender(f"Fallback text preview: {response_text[:200]}...")
+                    except Exception as fallback_error:
+                        log_to_blender(f"Fallback decode also failed: {fallback_error}", 'ERROR')
+                        return None
+                
+                if not response_text or not response_text.strip():
+                    log_to_blender("Empty response text after decoding", 'ERROR')
+                    return None
+                
+                # Try parsing JSON with error handling
+                try:
+                    result = response.json()
+                    log_to_blender("Primary JSON parsing succeeded", 'INFO')
+                except ValueError as json_error:
+                    log_to_blender(f"Primary JSON parsing failed: {json_error}", 'ERROR')
+                    # Try parsing from the decoded text
+                    import json
+                    try:
+                        result = json.loads(response_text)
+                        log_to_blender("Fallback JSON parsing succeeded", 'INFO')
+                    except Exception as fallback_json_error:
+                        log_to_blender(f"Fallback JSON parsing failed: {fallback_json_error}", 'ERROR')
+                        log_to_blender(f"Problem text: {response_text[:500]}", 'ERROR')
+                        return None
+                        
+            except Exception as content_error:
+                log_to_blender(f"Error handling response content: {content_error}", 'ERROR')
                 return None
+            
+            log_to_blender("Response parsed successfully")
+            log_to_blender(f"Result type: {type(result)}")
+            if isinstance(result, dict):
+                log_to_blender(f"Result keys: {list(result.keys())}")
+                if 'outputs' in result:
+                    log_to_blender(f"Found {len(result['outputs'])} outputs")
+                    for key, value in result['outputs'].items():
+                        log_to_blender(f"  Output '{key}': {type(value).__name__} = {str(value)[:100]}...")
+                if 'data' in result:
+                    log_to_blender(f"Found 'data' key with type: {type(result['data'])}")
+                    if isinstance(result['data'], list):
+                        log_to_blender(f"Data array contains {len(result['data'])} items")
+                    elif isinstance(result['data'], dict):
+                        log_to_blender(f"Data dict contains keys: {list(result['data'].keys())}")
+                if 'instance_id' in result:
+                    log_to_blender(f"Instance ID: {result['instance_id']}")
+            else:
+                log_to_blender(f"Result content: {result}")
+            return result
                 
         except requests.exceptions.Timeout:
             log_to_blender("Request timed out after 5 minutes", 'ERROR')
@@ -214,6 +398,12 @@ class RunChatAPI:
         url = RunChatAPI.UPLOAD_URL
         headers = RunChatAPI.get_headers(api_key)
         
+        # Add compression headers to avoid zstd
+        headers.update({
+            'Accept-Encoding': 'gzip, deflate',  # Avoid zstd compression
+            'Cache-Control': 'no-cache'  # Try to bypass caching
+        })
+        
         data = {
             "base64Image": base64_image,
             "filename": filename
@@ -222,13 +412,68 @@ class RunChatAPI:
         log_to_blender(f"Uploading image: {filename}")
         log_to_blender(f"Image size: {len(base64_image)} characters")
         
+        # Get requests module once and reuse
+        requests = get_requests_module()
+        
         try:
             log_to_blender("Sending image upload request...")
             response = requests.post(url, headers=headers, json=data, timeout=60)
             log_to_blender(f"Upload response status: {response.status_code}")
+            log_to_blender(f"Upload response headers: {dict(response.headers)}")
             
             response.raise_for_status()
-            result = response.json()
+            
+            # Handle response content robustly (same as other methods)
+            try:
+                # Check raw content first
+                raw_content = response.content
+                log_to_blender(f"Raw content length: {len(raw_content)} bytes")
+                log_to_blender(f"Content encoding: {response.headers.get('Content-Encoding', 'none')}")
+                
+                if not raw_content:
+                    log_to_blender("Empty raw content received", 'ERROR')
+                    return None
+                
+                # Try to get text content
+                try:
+                    response_text = response.text
+                    log_to_blender(f"Response text length: {len(response_text)}")
+                    log_to_blender(f"Response text preview: {response_text[:200]}...")
+                except Exception as text_error:
+                    log_to_blender(f"Failed to decode response text: {text_error}", 'ERROR')
+                    
+                    # Fallback: try to decode raw content as UTF-8
+                    try:
+                        response_text = raw_content.decode('utf-8')
+                        log_to_blender(f"Fallback decoded text length: {len(response_text)}")
+                        log_to_blender(f"Fallback text preview: {response_text[:200]}...")
+                    except Exception as fallback_error:
+                        log_to_blender(f"Fallback decode also failed: {fallback_error}", 'ERROR')
+                        return None
+                
+                if not response_text or not response_text.strip():
+                    log_to_blender("Empty response text after decoding", 'ERROR')
+                    return None
+                
+                # Try parsing JSON with error handling
+                try:
+                    result = response.json()
+                    log_to_blender("Upload JSON parsing succeeded", 'INFO')
+                except ValueError as json_error:
+                    log_to_blender(f"Primary JSON parsing failed: {json_error}", 'ERROR')
+                    # Try parsing from the decoded text
+                    import json
+                    try:
+                        result = json.loads(response_text)
+                        log_to_blender("Fallback JSON parsing succeeded", 'INFO')
+                    except Exception as fallback_json_error:
+                        log_to_blender(f"Fallback JSON parsing failed: {fallback_json_error}", 'ERROR')
+                        log_to_blender(f"Problem text: {response_text[:500]}", 'ERROR')
+                        return None
+                        
+            except Exception as content_error:
+                log_to_blender(f"Error handling response content: {content_error}", 'ERROR')
+                return None
             
             url_result = result.get("url")
             if url_result:
@@ -237,6 +482,16 @@ class RunChatAPI:
                 log_to_blender("Image upload completed but no URL returned", 'WARNING')
             
             return url_result
+        except requests.exceptions.Timeout:
+            log_to_blender("Upload request timed out", 'ERROR')
+            return None
+        except requests.exceptions.ConnectionError as e:
+            log_to_blender(f"Upload connection error: {e}", 'ERROR')
+            return None
+        except requests.exceptions.HTTPError as e:
+            log_to_blender(f"Upload HTTP Error: {e}", 'ERROR')
+            log_to_blender(f"Response content: {response.text}", 'ERROR')
+            return None
         except requests.exceptions.RequestException as e:
             log_to_blender(f"Image upload error: {e}", 'ERROR')
             if hasattr(e, 'response') and e.response is not None:
@@ -259,7 +514,7 @@ class RunChatAPI:
         log_to_blender(f"Polling with instance ID: {instance_id}")
         
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=30)
+            response = get_requests_module().post(url, headers=headers, json=data, timeout=30)
             log_to_blender(f"Polling response status: {response.status_code}")
             
             if response.status_code == 404:
@@ -279,6 +534,6 @@ class RunChatAPI:
             
             return None
             
-        except requests.exceptions.RequestException as e:
+        except get_requests_module().exceptions.RequestException as e:
             log_to_blender(f"Error polling workflow status: {e}")
             return None
