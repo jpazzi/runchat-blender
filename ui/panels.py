@@ -45,13 +45,48 @@ class RUNCHAT_PT_main_panel(Panel):
             # Prominent download button
             download_row = update_box.row()
             download_row.scale_y = 1.6  # Make button bigger
-            download_op = download_row.operator("runchat.download_update", text="📥 Download Latest Package", icon="IMPORT")
+            download_op = download_row.operator("runchat.download_update", text="Download Latest Package", icon="IMPORT")
             download_row.alert = True  # Make button highlighted in red
             
-            # Additional helpful text
-            help_row = update_box.row()
-            help_row.scale_y = 0.8
-            help_row.label(text="Click to download and manually install the new version")
+            # Release notes dropdown section
+            if hasattr(runchat_props, 'release_notes') and len(runchat_props.release_notes) > 0:
+                # Collapsible release notes header
+                notes_header = update_box.row()
+                notes_header.prop(runchat_props, "show_release_notes", 
+                                icon="TRIA_DOWN" if runchat_props.show_release_notes else "TRIA_RIGHT",
+                                icon_only=True, emboss=False)
+                notes_header.label(text="What's new in this update")
+                
+                # Show release notes content when expanded
+                if runchat_props.show_release_notes:
+                    notes_box = update_box.box()
+                    notes_box.scale_y = 0.9
+                    
+                    # Show release notes for the latest version
+                    latest_release = runchat_props.release_notes[0]  # Assuming sorted by version (latest first)
+                    version_row = notes_box.row()
+                    version_row.scale_y = 0.8
+                    version_row.label(text=f"Version {latest_release.version} ({latest_release.date})")
+                    
+                    # Parse and display release items
+                    try:
+                        import json
+                        items = json.loads(latest_release.items)
+                        for item in items:  # Show all items when expanded
+                            item_row = notes_box.row()
+                            item_row.scale_y = 0.7
+                            item_row.label(text=item)
+                            
+                    except (json.JSONDecodeError, AttributeError):
+                        # Fallback if JSON parsing fails
+                        fallback_row = notes_box.row()
+                        fallback_row.scale_y = 0.8
+                        fallback_row.label(text="New features and improvements available")
+            else:
+                # Fallback to generic message if no release notes available
+                help_row = update_box.row()
+                help_row.scale_y = 0.8
+                help_row.label(text="Click to download and manually install the new version")
             
             # Separator after update notification
             layout.separator()
@@ -62,7 +97,7 @@ class RUNCHAT_PT_main_panel(Panel):
         examples_header.prop(runchat_props, "show_examples", 
                            icon="TRIA_DOWN" if runchat_props.show_examples else "TRIA_RIGHT",
                            icon_only=True, emboss=False)
-        examples_header.label(text="Workflow Examples")
+        examples_header.label(text="Select a Workflow")
         
         if runchat_props.show_examples:
             if runchat_props.examples_loading:
@@ -87,7 +122,7 @@ class RUNCHAT_PT_main_panel(Panel):
         
         # Main controls (runchat ID input)
         row = examples_box.row()
-        row.prop(runchat_props, "runchat_id", text="Load Runchat using ID:")
+        row.prop(runchat_props, "runchat_id", text="Load by ID")
         row.operator("runchat.load_schema", text="", icon="IMPORT")
 
         layout.separator()
@@ -95,20 +130,17 @@ class RUNCHAT_PT_main_panel(Panel):
         # Workflow info
         if runchat_props.schema_loaded:
             box = layout.box()
-            box.label(text=f"Workflow: {runchat_props.workflow_name}", icon="FILE_SCRIPT")
+            box.label(text=f"{runchat_props.workflow_name}", icon="FILE_SCRIPT")
             
-            # Open in Editor button (only show when schema is loaded)
+            # Open in Editor and Clear Workflow buttons (only show when schema is loaded)
             if runchat_props.runchat_id:
                 editor_row = box.row()
                 editor_row.operator("runchat.open_editor", text="Open in Editor", icon="URL")
+                editor_row.operator("runchat.clear_workflow", text="Clear Workflow", icon="TRASH")
             
-            # Status and progress
+            # Status
             if runchat_props.status != "Ready":
                 box.label(text=f"Status: {runchat_props.status}")
-                if runchat_props.progress > 0:
-                    box.prop(runchat_props, "progress", slider=True)
-                    if runchat_props.progress_message:
-                        box.label(text=runchat_props.progress_message)
 
 
 
@@ -426,17 +458,36 @@ class RUNCHAT_PT_execution_panel(Panel):
     def poll(cls, context):
         scene = context.scene
         runchat_props = scene.runchat_properties
-        return runchat_props.schema_loaded
+        
+        # Show panel if schema is loaded OR if execution is in progress
+        is_executing = ("Executing" in runchat_props.status or 
+                       "processing" in runchat_props.status.lower() or
+                       "Starting" in runchat_props.status or
+                       (runchat_props.progress > 0.0 and runchat_props.progress < 1.0))
+        
+        return runchat_props.schema_loaded or is_executing
     
     def draw(self, context):
         layout = self.layout
         scene = context.scene
         runchat_props = scene.runchat_properties
         
-        # Main execute button
+        # Check if execution is in progress
+        is_executing = ("Executing" in runchat_props.status or 
+                       "processing" in runchat_props.status.lower() or
+                       "Starting" in runchat_props.status or
+                       (runchat_props.progress > 0.0 and runchat_props.progress < 1.0))
+        
+        # Main execute/cancel button
         exec_row = layout.row()
         exec_row.scale_y = 1.5
-        exec_row.operator("runchat.execute", text="Execute Runchat", icon="PLAY")
+        
+        if is_executing:
+            # Show cancel button when executing
+            exec_row.operator("runchat.cancel_execution", text="Cancel Execution", icon="CANCEL")
+        else:
+            # Show execute button when not executing
+            exec_row.operator("runchat.execute", text="Execute Runchat", icon="PLAY")
 
 
 class RUNCHAT_PT_settings_panel(Panel):
@@ -528,10 +579,6 @@ class RUNCHAT_PT_help_panel(Panel):
         api_row = debug_box.row()
         api_row.operator("runchat.test_api_connection", text="Test API", icon="LINKED")
         api_row.operator("runchat.open_info_log", text="Show Info Log", icon="INFO")
-        
-        # Clear workflow row
-        clear_row = debug_box.row()
-        clear_row.operator("runchat.clear_workflow", text="Clear Workflow", icon="TRASH")
 
 
 

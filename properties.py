@@ -16,6 +16,12 @@ class RunChatExampleProperty(PropertyGroup):
     example_id: StringProperty(name="Example ID")
     name: StringProperty(name="Example Name")
 
+class RunChatReleaseNoteProperty(PropertyGroup):
+    """Property group for storing release notes"""
+    version: StringProperty(name="Version")
+    date: StringProperty(name="Date")
+    items: StringProperty(name="Items")  # Store as JSON string
+
 class RunChatInputProperty(PropertyGroup):
     param_id: StringProperty(name="Parameter ID")
     node_id: StringProperty(name="Node ID")
@@ -59,11 +65,13 @@ class RunChatProperties(PropertyGroup):
     inputs: CollectionProperty(type=RunChatInputProperty)
     outputs: CollectionProperty(type=RunChatOutputProperty)
     examples: CollectionProperty(type=RunChatExampleProperty)
+    release_notes: CollectionProperty(type=RunChatReleaseNoteProperty)
     
     show_inputs: BoolProperty(name="Show Inputs", default=True)
     show_outputs: BoolProperty(name="Show Outputs", default=True)
     show_advanced: BoolProperty(name="Show Advanced", default=False)
     show_examples: BoolProperty(name="Show Examples", default=True)
+    show_release_notes: BoolProperty(name="Show Release Notes", default=False)
     examples_loaded: BoolProperty(name="Examples Loaded", default=False)
     examples_loading: BoolProperty(name="Examples Loading", default=False)
     
@@ -104,6 +112,7 @@ class RunChatProperties(PropertyGroup):
 
 classes = [
     RunChatExampleProperty,
+    RunChatReleaseNoteProperty,
     RunChatInputProperty,
     RunChatOutputProperty,
     RunChatProperties,

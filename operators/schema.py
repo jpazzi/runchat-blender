@@ -430,6 +430,25 @@ class RUNCHAT_OT_load_examples(Operator):
                         runchat_props.download_url = version_info.get('download_url', '')
                         runchat_props.version_checked = True
                         
+                        # Handle release notes
+                        release_notes = version_info.get('release_notes', [])
+                        if release_notes:
+                            # Clear existing release notes
+                            runchat_props.release_notes.clear()
+                            
+                            # Parse and store release notes
+                            for release_note in release_notes:
+                                note_prop = runchat_props.release_notes.add()
+                                note_prop.version = release_note.get('version', '')
+                                note_prop.date = release_note.get('date', '')
+                                
+                                # Store items as JSON string
+                                import json
+                                items = release_note.get('items', [])
+                                note_prop.items = json.dumps(items)
+                                
+                                print(f"Added release notes for v{note_prop.version} with {len(items)} items")
+                        
                         print(f"Version check: Current={current_version}, Latest={runchat_props.latest_version}, Update Available={runchat_props.update_available}")
                         
                         if runchat_props.update_available:
