@@ -4,6 +4,7 @@ import bpy
 from bpy.types import Panel
 
 from . import helpers
+from .. import preferences
 
 
 class RUNCHAT_PT_main_panel(Panel):
@@ -22,7 +23,45 @@ class RUNCHAT_PT_main_panel(Panel):
         scene = context.scene
         runchat_props = scene.runchat_properties
         
-        # Version Update section (prominent placement at top)
+        # Get API key to determine what to show
+        api_key = preferences.get_api_key()
+        
+        # API Key section (only shown when no API key is set)
+        if not api_key:
+            api_box = layout.box()
+            api_box.label(text="API Configuration:", icon="WORLD_DATA")
+            
+            # Warning section with alert styling
+            warning_box = api_box.box()
+            warning_box.alert = True  # Make warning highlighted in red
+            api_warning = warning_box.row()
+            api_warning.scale_y = 1.2
+            api_warning.label(text="API Key Required", icon="ERROR")
+            
+            api_help = warning_box.row()
+            api_help.scale_y = 0.9
+            api_help.label(text="Enter your Runchat API key below to get started")
+            
+            api_help2 = warning_box.row()
+            api_help2.scale_y = 0.9
+            api_help2.label(text="If you don't have a Runchat API key, you can get one by signing up to Runchat using the button below")
+            
+            # API key input field
+            try:
+                addon_prefs = context.preferences.addons["runchat-blender"].preferences
+                api_input_row = api_box.row()
+                api_input_row.prop(addon_prefs, "api_key", text="API Key")
+            except (KeyError, AttributeError):
+                api_box.label(text="Error: Cannot access preferences", icon="ERROR")
+            
+            # API key configuration buttons
+            api_buttons = api_box.row()
+            api_buttons.operator("runchat.open_api_keys", text="Get API Key", icon="URL")
+            
+            # Add preferences button as backup
+            api_buttons.operator("screen.userpref_show", text="Preferences", icon="PREFERENCES")
+        
+        # Version Update section (always shown)
         # Use getattr with defaults for backwards compatibility
         version_checked = getattr(runchat_props, 'version_checked', False)
         update_available = getattr(runchat_props, 'update_available', False)
@@ -91,7 +130,17 @@ class RUNCHAT_PT_main_panel(Panel):
             # Separator after update notification
             layout.separator()
 
-        # Workflow Examples section
+        # Only show workflow sections if API key is configured
+        if not api_key:
+            # Show message encouraging API key setup
+            help_box = layout.box()
+            help_box.scale_y = 0.9
+            help_row = help_box.row()
+            help_row.alignment = 'CENTER'
+            help_row.label(text="Configure your API key above to start using Runchat workflows", icon="INFO")
+            return
+        
+        # Workflow Examples section (only when API key is set)
         examples_box = layout.box()
         examples_header = examples_box.row()
         examples_header.prop(runchat_props, "show_examples", 
@@ -137,10 +186,6 @@ class RUNCHAT_PT_main_panel(Panel):
                 editor_row = box.row()
                 editor_row.operator("runchat.open_editor", text="Open in Editor", icon="URL")
                 editor_row.operator("runchat.clear_workflow", text="Clear Workflow", icon="TRASH")
-            
-            # Status
-            if runchat_props.status != "Ready":
-                box.label(text=f"Status: {runchat_props.status}")
 
 
 
@@ -154,6 +199,11 @@ class RUNCHAT_PT_inputs_panel(Panel):
     
     @classmethod
     def poll(cls, context):
+        # Only show if API key is configured and schema is loaded with inputs
+        api_key = preferences.get_api_key()
+        if not api_key:
+            return False
+            
         scene = context.scene
         runchat_props = scene.runchat_properties
         return runchat_props.schema_loaded and len(runchat_props.inputs) > 0
@@ -249,6 +299,11 @@ class RUNCHAT_PT_outputs_panel(Panel):
     
     @classmethod
     def poll(cls, context):
+        # Only show if API key is configured and schema is loaded with outputs
+        api_key = preferences.get_api_key()
+        if not api_key:
+            return False
+            
         scene = context.scene
         runchat_props = scene.runchat_properties
         return runchat_props.schema_loaded and len(runchat_props.outputs) > 0
@@ -257,6 +312,11 @@ class RUNCHAT_PT_outputs_panel(Panel):
         layout = self.layout
         scene = context.scene
         runchat_props = scene.runchat_properties
+        
+        # Status section
+        if runchat_props.status != "Ready":
+            status_box = layout.box()
+            status_box.label(text=f"Status: {runchat_props.status}", icon="INFO")
         
         # Outputs section
         for i, output_prop in enumerate(runchat_props.outputs):
@@ -456,6 +516,11 @@ class RUNCHAT_PT_execution_panel(Panel):
     
     @classmethod
     def poll(cls, context):
+        # Only show if API key is configured
+        api_key = preferences.get_api_key()
+        if not api_key:
+            return False
+            
         scene = context.scene
         runchat_props = scene.runchat_properties
         
@@ -501,6 +566,11 @@ class RUNCHAT_PT_settings_panel(Panel):
     
     @classmethod
     def poll(cls, context):
+        # Only show if API key is configured and schema is loaded
+        api_key = preferences.get_api_key()
+        if not api_key:
+            return False
+            
         scene = context.scene
         runchat_props = scene.runchat_properties
         return runchat_props.schema_loaded
@@ -536,6 +606,12 @@ class RUNCHAT_PT_help_panel(Panel):
     bl_context = "scene"
     bl_parent_id = "RUNCHAT_PT_main_panel"
     bl_options = {'DEFAULT_CLOSED'}
+    
+    @classmethod
+    def poll(cls, context):
+        # Only show if API key is configured
+        api_key = preferences.get_api_key()
+        return bool(api_key)
     
     def draw(self, context):
         layout = self.layout

@@ -5,7 +5,7 @@ A comprehensive Blender plugin for integrating with Runchat workflows, providing
 ## 🚀 Quick Start (30 seconds setup)
 
 **New to Runchat?** No problem! Here's what you need:
-1. A free Runchat account → [Sign up here](https://runchat.app/signup)
+1. A free Runchat account → [Sign up here](https://runchat.app/signup/blender)
 2. Blender 3.0+ installed
 3. Python dependencies (auto-installed below)
 
@@ -27,9 +27,6 @@ python install.py
 Transform your Blender workflows with AI:
 - **Generate 3D models** from text descriptions or reference images
 - **Enhance textures** using AI image processing
-- **Auto-rig characters** with ML-powered rigging workflows  
-- **Create animations** from pose sequences
-- **Generate environments** from concept sketches
 - **Process render outputs** for post-effects and style transfer
 
 All without leaving Blender!
@@ -49,6 +46,8 @@ The following packages are auto-installed by `install.py`:
 - `json` - For data handling (usually built-in)
 
 ## 📦 Installation
+
+can you write a post for the announce of the blender plugin for runchat? It is the easiest and fastest way to use the latest ai models directly in blender. It supports 
 
 ### Method 1: Auto-Install (Recommended)
 ```bash

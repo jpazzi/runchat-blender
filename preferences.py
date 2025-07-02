@@ -8,7 +8,7 @@ class RunChatPreferences(AddonPreferences):
 
     api_key: StringProperty(
         name="Runchat API Key",
-        description="Your Runchat API key. Get one at runchat.app/dashboard/keys",
+        description="Your Runchat API key. Get one at https://runchat.app/signup/blender",
         default="",
         subtype='PASSWORD'
     )
@@ -33,7 +33,7 @@ class RUNCHAT_OT_OpenApiKeys(bpy.types.Operator):
     bl_label = "Open API Keys Page"
     
     def execute(self, context):
-        webbrowser.open("https://runchat.app/dashboard/keys")
+        webbrowser.open("https://runchat.app/signup/blender")
         return {'FINISHED'}
 
 class RUNCHAT_OT_OpenDocs(bpy.types.Operator):
