@@ -55,7 +55,6 @@ class RUNCHAT_PT_main_panel(Panel):
             
             # Separator after update notification
             layout.separator()
-            layout.separator()
 
         # Workflow Examples section
         examples_box = layout.box()
@@ -83,16 +82,15 @@ class RUNCHAT_PT_main_panel(Panel):
                 # Show loaded examples
                 for i, example in enumerate(runchat_props.examples):
                     example_row = examples_box.row()
-                    example_row.label(text=example.name)
-                    op = example_row.operator("runchat.use_example", text="Use")
+                    op = example_row.operator("runchat.use_example", text=example.name)
                     op.example_id = example.example_id
         
-        layout.separator()
-        
-        # Main controls
-        row = layout.row()
-        row.prop(runchat_props, "runchat_id")
+        # Main controls (runchat ID input)
+        row = examples_box.row()
+        row.prop(runchat_props, "runchat_id", text="Load Runchat using ID:")
         row.operator("runchat.load_schema", text="", icon="IMPORT")
+
+        layout.separator()
             
         # Workflow info
         if runchat_props.schema_loaded:
