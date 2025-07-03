@@ -21,6 +21,32 @@ def log_to_blender(message, level='INFO'):
     # API module doesn't have operator context, so just print to console
 
 
+def is_credit_error(error_message):
+    """Check if an error message indicates credit exhaustion"""
+    if not error_message:
+        return False
+    
+    error_lower = error_message.lower()
+    credit_keywords = [
+        'credit', 'credits', 'remaining', 'exhausted', 'usage',
+        'limit', 'subscription', 'upgrade', 'plan'
+    ]
+    
+    return any(keyword in error_lower for keyword in credit_keywords)
+
+
+def format_credit_error(error_message):
+    """Format a credit error message for display"""
+    if not error_message:
+        return "No credits remaining to execute this workflow."
+    
+    # Clean up the error message for better display
+    if "This request requires" in error_message or "You have used" in error_message:
+        return error_message
+    
+    return f"Credit limit reached: {error_message}"
+
+
 class RunChatAPI:
     BASE_URL = "https://runchat.app/api/v1"
     UPLOAD_URL = "https://runchat.app/api/upload/supabase"
@@ -383,6 +409,31 @@ class RunChatAPI:
         except requests.exceptions.HTTPError as e:
             log_to_blender(f"HTTP Error: {e}", 'ERROR')
             log_to_blender(f"Response content: {response.text}", 'ERROR')
+            
+            # For 403 errors, try to extract the error message and return it
+            if response.status_code == 403:
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data, dict) and 'error' in error_data:
+                        error_message = error_data['error']
+                        log_to_blender(f"403 Error details: {error_message}", 'ERROR')
+                        # Return a special error result instead of None
+                        return {
+                            'error': True,
+                            'status_code': 403,
+                            'message': error_message,
+                            'is_credit_error': is_credit_error(error_message)
+                        }
+                except Exception as parse_error:
+                    log_to_blender(f"Failed to parse 403 error response: {parse_error}", 'ERROR')
+                    # Return generic credit error for 403s
+                    return {
+                        'error': True,
+                        'status_code': 403,
+                        'message': 'Access forbidden - this may be due to insufficient credits.',
+                        'is_credit_error': True
+                    }
+            
             return None
         except requests.exceptions.RequestException as e:
             log_to_blender(f"runchat API Error: {e}", 'ERROR')

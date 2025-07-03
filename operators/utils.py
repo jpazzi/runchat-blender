@@ -76,6 +76,26 @@ class RUNCHAT_OT_youtube_tutorials(Operator):
         return {'FINISHED'}
 
 
+class RUNCHAT_OT_manage_account(Operator):
+    """Open RunChat account management page"""
+    bl_idname = "runchat.manage_account"
+    bl_label = "Manage Account"
+    
+    def execute(self, context):
+        webbrowser.open("https://runchat.app/dashboard/account")
+        return {'FINISHED'}
+
+
+class RUNCHAT_OT_pricing(Operator):
+    """Open RunChat pricing page"""
+    bl_idname = "runchat.pricing"
+    bl_label = "View Pricing"
+    
+    def execute(self, context):
+        webbrowser.open("https://runchat.app/pricing")
+        return {'FINISHED'}
+
+
 class RUNCHAT_OT_open_link(Operator):
     """Open a URL from markdown link in description"""
     bl_idname = "runchat.open_link"
@@ -104,5 +124,7 @@ classes = [
     RUNCHAT_OT_open_editor,
     RUNCHAT_OT_help,
     RUNCHAT_OT_youtube_tutorials,
+    RUNCHAT_OT_manage_account,
+    RUNCHAT_OT_pricing,
     RUNCHAT_OT_open_link,
 ] 

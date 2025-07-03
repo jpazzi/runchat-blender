@@ -57,6 +57,9 @@ def register():
     bpy.utils.register_class(utils.RUNCHAT_OT_copy_text)
     bpy.utils.register_class(utils.RUNCHAT_OT_open_editor)
     bpy.utils.register_class(utils.RUNCHAT_OT_help)
+    bpy.utils.register_class(utils.RUNCHAT_OT_youtube_tutorials)
+    bpy.utils.register_class(utils.RUNCHAT_OT_manage_account)
+    bpy.utils.register_class(utils.RUNCHAT_OT_pricing)
     bpy.utils.register_class(utils.RUNCHAT_OT_open_link)
     
     # Debug operators
@@ -75,6 +78,9 @@ def unregister():
     
     # Utility operations
     bpy.utils.unregister_class(utils.RUNCHAT_OT_open_link)
+    bpy.utils.unregister_class(utils.RUNCHAT_OT_pricing)
+    bpy.utils.unregister_class(utils.RUNCHAT_OT_manage_account)
+    bpy.utils.unregister_class(utils.RUNCHAT_OT_youtube_tutorials)
     bpy.utils.unregister_class(utils.RUNCHAT_OT_help)
     bpy.utils.unregister_class(utils.RUNCHAT_OT_open_editor)
     bpy.utils.unregister_class(utils.RUNCHAT_OT_copy_text)

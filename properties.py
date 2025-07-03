@@ -108,6 +108,18 @@ class RunChatProperties(PropertyGroup):
     
     progress: FloatProperty(name="Progress", min=0.0, max=1.0, default=0.0)
     progress_message: StringProperty(name="Progress Message", default="")
+    
+    # Credit error properties (added for better error handling)
+    has_credit_error: BoolProperty(
+        name="Has Credit Error", 
+        default=False,
+        description="Whether the last execution failed due to credit exhaustion"
+    )
+    credit_error_message: StringProperty(
+        name="Credit Error Message", 
+        default="",
+        description="Detailed credit error message from the API"
+    )
 
 
 classes = [

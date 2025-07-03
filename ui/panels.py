@@ -130,6 +130,35 @@ class RUNCHAT_PT_main_panel(Panel):
             # Separator after update notification
             layout.separator()
 
+        # Credit Error section (shown prominently when there's a credit error)
+        if api_key and hasattr(runchat_props, 'has_credit_error') and runchat_props.has_credit_error:
+            # Create a prominent credit error notification box
+            credit_error_box = layout.box()
+            credit_error_box.alert = True  # Makes the box highlighted in red
+            
+            # Main header with eye-catching icon
+            error_header = credit_error_box.row()
+            error_header.scale_y = 1.2  # Make it taller
+            error_header.label(text="Credits Exhausted - Workflow Failed!", icon="ERROR")
+            
+            # Error message
+            if hasattr(runchat_props, 'credit_error_message') and runchat_props.credit_error_message:
+                message_row = credit_error_box.row()
+                message_row.label(text=runchat_props.credit_error_message)
+            else:
+                message_row = credit_error_box.row()
+                message_row.label(text="You have reached your credit limit for this billing period.")
+            
+            # Action buttons
+            actions_row = credit_error_box.row()
+            actions_row.scale_y = 1.4  # Make buttons bigger
+            
+            # Pricing button
+            actions_row.operator("runchat.pricing", text="Get More Credits", icon="FUND")
+            
+            # Separator after credit error notification
+            layout.separator()
+
         # Only show workflow sections if API key is configured
         if not api_key:
             # Show message encouraging API key setup

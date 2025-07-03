@@ -86,6 +86,10 @@ class RUNCHAT_OT_execute(Operator):
         runchat_props.progress = 0.0
         runchat_props.progress_message = "Initializing..."
         
+        # Clear credit error state from previous executions
+        runchat_props.has_credit_error = False
+        runchat_props.credit_error_message = ""
+        
         # Clear previous output values to show running status
         for output_prop in runchat_props.outputs:
             output_prop.value = ""
@@ -157,6 +161,7 @@ class RUNCHAT_OT_execute(Operator):
             
             # Execute the workflow (this will block until complete)
             log_to_blender("Starting workflow execution (this may take a while)...")
+            
             result = api.RunChatAPI.run_workflow(runchat_props.runchat_id, api_key, inputs, runchat_props.instance_id)
             
             log_to_blender(f"Workflow execution completed. Result type: {type(result)}")
@@ -167,7 +172,33 @@ class RUNCHAT_OT_execute(Operator):
             else:
                 log_to_blender("No result returned from API")
             
-            if result:
+            # Check for error responses first
+            if result and isinstance(result, dict) and result.get('error'):
+                log_to_blender("Detected error response from API", 'ERROR')
+                error_message = result.get('message', 'Unknown error occurred')
+                is_credit_error = result.get('is_credit_error', False)
+                status_code = result.get('status_code', 0)
+                
+                if is_credit_error:
+                    log_to_blender(f"Credit error detected: {error_message}", 'ERROR')
+                    # Set specific credit error status
+                    update_progress(1.0, "Credit limit reached")
+                    runchat_props.status = "Credit Error"
+                    
+                    # Store credit error details for UI display
+                    runchat_props.credit_error_message = api.format_credit_error(error_message)
+                    runchat_props.has_credit_error = True
+                    
+                    log_to_blender(f"Credit error stored: {runchat_props.credit_error_message}", 'ERROR')
+                else:
+                    # Other types of errors
+                    update_progress(1.0, "Execution failed")
+                    runchat_props.status = f"API Error ({status_code}): {error_message}"
+                    runchat_props.has_credit_error = False
+                
+                return  # Exit early for error cases
+            
+            elif result:
                 # Process results
                 log_to_blender("=== PROCESSING RESULTS ===")
                 update_progress(0.85, "Processing outputs...")
