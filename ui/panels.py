@@ -266,9 +266,12 @@ class RUNCHAT_PT_inputs_panel(Panel):
             for line in desc_lines:
                 helpers.draw_description_line(desc_box, line, context)
         
-        # Simple text input
+        # Text input with appropriate label based on type
         text_row = box.row()
-        text_row.prop(input_prop, "text_value", text="Text Input")
+        if input_prop.data_type.lower() == "image":
+            text_row.prop(input_prop, "text_value", text="Image URL")
+        else:
+            text_row.prop(input_prop, "text_value", text="Text Input")
         
         # Show uploaded URL if available
         if input_prop.uploaded_url:
@@ -276,44 +279,45 @@ class RUNCHAT_PT_inputs_panel(Panel):
             url_box.scale_y = 0.8
             url_box.label(text=f"Uploaded: {input_prop.uploaded_url[:60]}{'...' if len(input_prop.uploaded_url) > 60 else ''}", icon="CHECKMARK")
         
-        # Image upload section (expandable for all text inputs)
-        upload_box = box.box()
-        upload_header = upload_box.row()
-        upload_header.prop(input_prop, "use_viewport_capture", 
-                          text="Upload Image Instead", 
-                          icon="TRIA_DOWN" if input_prop.use_viewport_capture else "TRIA_RIGHT",
-                          emboss=False)
-        
-        if input_prop.use_viewport_capture:
-            # Upload options when expanded
-            upload_content = upload_box.box()
-            upload_content.label(text="Choose upload method:", icon="IMAGE_DATA")
+        # Image upload section (only show for image type inputs)
+        if input_prop.data_type.lower() == "image":
+            upload_box = box.box()
+            upload_header = upload_box.row()
+            upload_header.prop(input_prop, "use_viewport_capture", 
+                              text="Upload Image Instead", 
+                              icon="TRIA_DOWN" if input_prop.use_viewport_capture else "TRIA_RIGHT",
+                              emboss=False)
             
-            # Viewport capture option
-            viewport_section = upload_content.box()
-            viewport_section.label(text="Viewport Capture:", icon="CAMERA_DATA")
-            viewport_row = viewport_section.row()
-            viewport_row.operator("runchat.upload_viewport", text="Capture & Upload Viewport", icon="CAMERA_DATA").input_index = index
-            
-            # File upload option
-            file_section = upload_content.box()
-            file_section.label(text="File Upload:", icon="FILE_FOLDER")
-            file_row = file_section.row()
-            file_row.prop(input_prop, "file_path", text="")
-            
-            if input_prop.file_path:
-                upload_row = file_section.row()
-                upload_row.operator("runchat.upload_file", text="Upload Selected File", icon="EXPORT").input_index = index
-            
-            # Upload status
-            if input_prop.upload_status:
-                status_row = upload_content.row()
-                if "success" in input_prop.upload_status.lower():
-                    status_row.label(text=input_prop.upload_status, icon="CHECKMARK")
-                elif "error" in input_prop.upload_status.lower():
-                    status_row.label(text=input_prop.upload_status, icon="ERROR")
-                else:
-                    status_row.label(text=input_prop.upload_status, icon="TIME")
+            if input_prop.use_viewport_capture:
+                # Upload options when expanded
+                upload_content = upload_box.box()
+                upload_content.label(text="Choose upload method:", icon="IMAGE_DATA")
+                
+                # Viewport capture option
+                viewport_section = upload_content.box()
+                viewport_section.label(text="Viewport Capture:", icon="CAMERA_DATA")
+                viewport_row = viewport_section.row()
+                viewport_row.operator("runchat.upload_viewport", text="Capture & Upload Viewport", icon="CAMERA_DATA").input_index = index
+                
+                # File upload option
+                file_section = upload_content.box()
+                file_section.label(text="File Upload:", icon="FILE_FOLDER")
+                file_row = file_section.row()
+                file_row.prop(input_prop, "file_path", text="")
+                
+                if input_prop.file_path:
+                    upload_row = file_section.row()
+                    upload_row.operator("runchat.upload_file", text="Upload Selected File", icon="EXPORT").input_index = index
+                
+                # Upload status
+                if input_prop.upload_status:
+                    status_row = upload_content.row()
+                    if "success" in input_prop.upload_status.lower():
+                        status_row.label(text=input_prop.upload_status, icon="CHECKMARK")
+                    elif "error" in input_prop.upload_status.lower():
+                        status_row.label(text=input_prop.upload_status, icon="ERROR")
+                    else:
+                        status_row.label(text=input_prop.upload_status, icon="TIME")
 
 
 class RUNCHAT_PT_outputs_panel(Panel):
