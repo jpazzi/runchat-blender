@@ -66,6 +66,16 @@ class RUNCHAT_OT_help(Operator):
         return {'FINISHED'}
 
 
+class RUNCHAT_OT_youtube_tutorials(Operator):
+    """Open RunChat YouTube tutorials"""
+    bl_idname = "runchat.youtube_tutorials"
+    bl_label = "Open YouTube Tutorials"
+    
+    def execute(self, context):
+        webbrowser.open("https://www.youtube.com/playlist?list=PLgT771y9VleA_56wwK7nqcuplAJWzpi8_")
+        return {'FINISHED'}
+
+
 class RUNCHAT_OT_open_link(Operator):
     """Open a URL from markdown link in description"""
     bl_idname = "runchat.open_link"
@@ -93,5 +103,6 @@ classes = [
     RUNCHAT_OT_copy_text,
     RUNCHAT_OT_open_editor,
     RUNCHAT_OT_help,
+    RUNCHAT_OT_youtube_tutorials,
     RUNCHAT_OT_open_link,
 ] 

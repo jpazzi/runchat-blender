@@ -163,16 +163,18 @@ class RUNCHAT_PT_main_panel(Panel):
                     hint_row.scale_y = 0.8
                     hint_row.label(text="Click to load workflow examples", icon="INFO")
             else:
-                # Show loaded examples
-                for i, example in enumerate(runchat_props.examples):
+                # Show loaded examples (sorted alphabetically)
+                sorted_examples = sorted(runchat_props.examples, key=lambda x: x.name.lower())
+                for i, example in enumerate(sorted_examples):
                     example_row = examples_box.row()
                     op = example_row.operator("runchat.use_example", text=example.name)
                     op.example_id = example.example_id
         
         # Main controls (runchat ID input)
+        examples_box.label(text="Load by ID:")
         row = examples_box.row()
-        row.prop(runchat_props, "runchat_id", text="Load by ID")
-        row.operator("runchat.load_schema", text="", icon="IMPORT")
+        row.prop(runchat_props, "runchat_id", text="")
+        row.operator("runchat.load_schema", text="", icon="LINKED")
 
         layout.separator()
             
@@ -443,7 +445,7 @@ class RUNCHAT_PT_outputs_panel(Panel):
             import_status_box = video_box.box()
             import_status_box.alert = False  # Use normal coloring
             status_row = import_status_box.row()
-            status_row.label(text="✅ Auto-imported to Video Sequencer", icon="CHECKMARK")
+            status_row.label(text="Auto-imported to Video Sequencer", icon="CHECKMARK")
             
             # Quick action to open sequencer
             action_row = import_status_box.row()
@@ -634,7 +636,7 @@ class RUNCHAT_PT_help_panel(Panel):
             
             if not runchat_props.update_available:
                 status_row = version_box.row()
-                status_row.label(text="✅ Up to date", icon="CHECKMARK")
+                status_row.label(text="Up to date", icon="CHECKMARK")
         
         layout.separator()
         
@@ -643,6 +645,7 @@ class RUNCHAT_PT_help_panel(Panel):
         help_box.label(text="Help:", icon="QUESTION")
         help_row = help_box.row()
         help_row.operator("runchat.help", text="Documentation", icon="URL")
+        help_row.operator("runchat.youtube_tutorials", text="YouTube Tutorials", icon="PLAY")
         
         # Debug and Testing section
         debug_box = layout.box()

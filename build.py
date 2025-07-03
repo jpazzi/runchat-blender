@@ -14,7 +14,6 @@ from pathlib import Path
 
 # Build configuration
 ADDON_NAME = "runchat-blender"
-VERSION = "1.2.0"  # Should match bl_info version
 REQUIRED_PACKAGES = ["requests", "Pillow"]
 
 def get_version():
@@ -33,9 +32,10 @@ def get_version():
             major, minor, patch = version_match.groups()
             return f"{major}.{minor}.{patch}"
     except Exception as e:
-        print(f"Warning: Could not extract version from bl_info: {e}")
+        print(f"Error: Could not extract version from bl_info: {e}")
+        raise
     
-    return VERSION
+    raise ValueError("Version not found in bl_info")
 
 def clean_build():
     """Clean previous build artifacts"""
