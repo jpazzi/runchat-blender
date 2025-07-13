@@ -52,6 +52,21 @@ python build.py
 ls dist/runchat-blender-v*.zip
 ```
 
+### Creating a Release
+
+To create a complete release with both package and repository index:
+
+```bash
+# Build package and generate repository index in one command
+python scripts/release.py
+
+# This will:
+# 1. Clean previous builds
+# 2. Build the addon package
+# 3. Generate the official Blender repository index
+# 4. Show next steps for publishing
+```
+
 ### Debug Development
 
 For development and debugging, run Blender with Python debugging enabled:
@@ -77,6 +92,14 @@ This will show Python errors, import issues, and console output in the terminal,
 4. **Install in Blender**: Use the zip from `dist/` folder
 5. **Test with debug mode**: Run Blender with `--debug-python`
 6. **Check console output** for errors or debug messages
+
+### Release Workflow
+
+1. **Create release**: `python scripts/release.py`
+2. **Test the package** locally in Blender
+3. **Commit and push**: `git add dist/ && git commit -m "Release vX.X.X" && git push`
+4. **Create GitHub release** and upload the .zip file
+5. **Repository is ready** at: `https://github.com/jpazzi/runchat-blender/raw/main/dist/index.json`
 
 ### Architecture
 

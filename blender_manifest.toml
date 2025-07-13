@@ -22,8 +22,6 @@ license = [
 ]
 
 
-
-
 # Bundle 3rd party Python modules as wheels
 wheels = [
   "./wheels/certifi-2025.7.9-py3-none-any.whl",
