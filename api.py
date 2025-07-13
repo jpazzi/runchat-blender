@@ -62,6 +62,11 @@ class RunChatAPI:
     @staticmethod
     def get_examples_for_plugin(plugin="blender", version=None):
         """Get curated workflow examples for a specific plugin"""
+        # Check if online access is available
+        if not bpy.app.online_access:
+            log_to_blender("Network access is disabled in Blender", 'ERROR')
+            return None
+            
         url = f"{RunChatAPI.EXAMPLES_URL}?plugin={plugin}"
         if version:
             url += f"&version={version}"
@@ -187,6 +192,11 @@ class RunChatAPI:
     @staticmethod
     def get_schema(runchat_id, api_key):
         """Get schema for a Runchat workflow"""
+        # Check if online access is available
+        if not bpy.app.online_access:
+            log_to_blender("Network access is disabled in Blender", 'ERROR')
+            return None
+            
         if not runchat_id or not api_key:
             log_to_blender("Runchat ID and API key are required", 'ERROR')
             return None
@@ -286,6 +296,11 @@ class RunChatAPI:
     @staticmethod
     def run_workflow(runchat_id, api_key, inputs=None, instance_id=None):
         """Run a Runchat workflow"""
+        # Check if online access is available
+        if not bpy.app.online_access:
+            log_to_blender("Network access is disabled in Blender", 'ERROR')
+            return None
+            
         if not runchat_id or not api_key:
             log_to_blender("Runchat ID and API key are required", 'ERROR')
             return None
@@ -442,6 +457,11 @@ class RunChatAPI:
     @staticmethod
     def upload_image(base64_image, filename, api_key):
         """Upload an image to runchat"""
+        # Check if online access is available
+        if not bpy.app.online_access:
+            log_to_blender("Network access is disabled in Blender", 'ERROR')
+            return None
+            
         if not base64_image or not api_key:
             log_to_blender("Base64 image and API key are required", 'ERROR')
             return None
@@ -552,6 +572,11 @@ class RunChatAPI:
     @staticmethod
     def poll_workflow_status(runchat_id, api_key, instance_id):
         """Poll for workflow status and progress"""
+        # Check if online access is available
+        if not bpy.app.online_access:
+            log_to_blender("Network access is disabled in Blender", 'ERROR')
+            return None
+            
         if not runchat_id or not api_key or not instance_id:
             log_to_blender("Runchat ID, API key, and instance ID are required for polling", 'ERROR')
             return None
