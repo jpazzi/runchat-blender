@@ -1,0 +1,38 @@
+schema_version = "1.0.0"
+
+# Runchat Blender Addon manifest
+id = "runchat_blender_addon"
+version = "1.2.0"
+name = "Runchat Blender Addon"
+tagline = "Integrates Runchat workflows directly into Blender"
+maintainer = "Runchat"
+type = "add-on"
+
+# Documentation and support
+website = "https://docs.runchat.app"
+
+# Optional: tag list for categorization
+tags = ["System", "Pipeline", "Import-Export"]
+
+blender_version_min = "4.2.0"
+
+# License - using GPL-3.0 as it's compatible with Blender
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+# Permissions - this addon needs network access to communicate with Runchat
+[permissions]
+network = "Connect to Runchat API to sync workflows and data"
+files = "Import/export workflow files and assets"
+
+# Build settings to exclude development files
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  ".*",
+  "*.zip",
+  "*.pyc",
+  "test_*",
+  "BUILD_GUIDE.md",
+] 
