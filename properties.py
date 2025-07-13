@@ -1,4 +1,5 @@
 # properties.py
+# Copyright (C) 2024 Runchat - Licensed under GPL v3
 
 import bpy
 from bpy.types import PropertyGroup

@@ -46,4 +46,10 @@ Blender addon for executing Runchat AI workflows directly from Blender.
 
 ## License
 
+This plugin is licensed under the GNU General Public License v3.0 (GPL v3). See the [LICENSE.txt](LICENSE.txt) file for full license text.
+
+**Important Note**: This plugin connects to the Runchat API, which is a separate service with its own terms of service. By using this plugin, you agree to both:
+- The GPL v3 license for the plugin code
+- Runchat's Terms of Service for the API service
+
 This is an experimental tool. Use at your own risk.
