@@ -1,6 +1,6 @@
 """
 Dependency management for Runchat Blender addon
-Uses bundled dependencies only
+Uses wheel-based dependencies managed by Blender's extension system
 """
 
 import sys
@@ -8,37 +8,37 @@ import os
 
 
 def get_requests():
-    """Get bundled requests module"""
+    """Get requests module from wheel"""
     try:
         import requests
-        print("[Runchat] Using bundled requests library")
-        return requests, "bundled"
+        print("[Runchat] Using wheel-based requests library")
+        return requests, "wheel"
     except ImportError as e:
-        print(f"[Runchat] ERROR: Could not import bundled requests: {e}")
-        print("[Runchat] Make sure the addon includes bundled dependencies in lib/ folder")
-        raise ImportError("Bundled requests library not found. Please use a properly bundled version of the addon.")
+        print(f"[Runchat] ERROR: Could not import requests from wheels: {e}")
+        print("[Runchat] Make sure the addon includes wheel dependencies and Blender extensions are enabled")
+        raise ImportError("Requests wheel not found. Please use a properly bundled version of the addon.")
 
 
 def get_pil():
-    """Get bundled PIL/Pillow module"""
+    """Get PIL/Pillow module from wheel"""
     try:
         from PIL import Image
-        print("[Runchat] Using bundled PIL/Pillow library")
+        print("[Runchat] Using wheel-based PIL/Pillow library")
         return Image, True
     except ImportError as e:
-        print(f"[Runchat] ERROR: Could not import bundled PIL: {e}")
-        print("[Runchat] Make sure the addon includes bundled dependencies in lib/ folder")
-        raise ImportError("Bundled PIL library not found. Please use a properly bundled version of the addon.")
+        print(f"[Runchat] ERROR: Could not import PIL from wheels: {e}")
+        print("[Runchat] Make sure the addon includes wheel dependencies and Blender extensions are enabled")
+        raise ImportError("PIL wheel not found. Please use a properly bundled version of the addon.")
 
 
 def get_http_client():
-    """Get bundled HTTP client (requests)"""
+    """Get HTTP client (requests) from wheel"""
     return get_requests()
 
 
 def check_dependencies():
-    """Check and report on bundled dependencies"""
-    print("[Runchat] Checking bundled dependencies...")
+    """Check and report on wheel-based dependencies"""
+    print("[Runchat] Checking wheel-based dependencies...")
     
     results = {}
     
@@ -49,7 +49,7 @@ def check_dependencies():
         results['requests_backend'] = requests_backend
         print(f"[Runchat] Requests: {requests_backend}")
     except ImportError as e:
-        print(f"[Runchat] CRITICAL: Missing bundled requests: {e}")
+        print(f"[Runchat] CRITICAL: Missing requests wheel: {e}")
         raise
     
     # Check PIL (required)
@@ -59,7 +59,7 @@ def check_dependencies():
         results['pil_available'] = pil_available
         print(f"[Runchat] PIL/Pillow: {'Available' if pil_available else 'Not available'}")
     except ImportError as e:
-        print(f"[Runchat] CRITICAL: Missing bundled PIL: {e}")
+        print(f"[Runchat] CRITICAL: Missing PIL wheel: {e}")
         raise
     
     return results 

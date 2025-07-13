@@ -43,11 +43,11 @@ def clean_build():
     """Clean previous build artifacts"""
     addon_dir = Path(__file__).parent
     
-    # Clean lib directory
-    lib_dir = addon_dir / "lib"
-    if lib_dir.exists():
-        print(f"🧹 Cleaning existing lib directory: {lib_dir}")
-        shutil.rmtree(lib_dir)
+    # Clean wheels directory
+    wheels_dir = addon_dir / "wheels"
+    if wheels_dir.exists():
+        print(f"🧹 Cleaning existing wheels directory: {wheels_dir}")
+        shutil.rmtree(wheels_dir)
     
     # Clean build directory
     build_dir = addon_dir / "build"
@@ -114,139 +114,122 @@ def download_dependencies():
     print("✅ All packages downloaded for Python 3.11")
     return True
 
-def extract_packages():
-    """Extract downloaded packages to lib directory"""
+def copy_wheels():
+    """Copy wheel files to wheels directory (Blender extension format)"""
     addon_dir = Path(__file__).parent
     build_dir = addon_dir / "build"
     temp_dir = build_dir / "temp"
-    lib_dir = addon_dir / "lib"
+    wheels_dir = addon_dir / "wheels"
     
-    print(f"📂 Extracting packages to: {lib_dir}")
+    print(f"📂 Copying wheels to: {wheels_dir}")
     
-    # Extract all .whl files
+    # Create wheels directory
+    wheels_dir.mkdir(exist_ok=True)
+    
+    # Copy all .whl files
     whl_files = list(temp_dir.glob("*.whl"))
     if not whl_files:
-        print("❌ No .whl files found to extract")
+        print("❌ No .whl files found to copy")
         return False
     
     for whl_file in whl_files:
-        print(f"  • Extracting {whl_file.name}...")
+        print(f"  • Copying {whl_file.name}...")
         try:
-            # Extract wheel file to temp location
-            extract_temp = temp_dir / "extract" / whl_file.stem
-            extract_temp.mkdir(parents=True, exist_ok=True)
-            
-            with zipfile.ZipFile(whl_file, 'r') as zip_ref:
-                zip_ref.extractall(extract_temp)
-            
-            # Find and copy the actual package directories
-            for item in extract_temp.iterdir():
-                if item.is_dir() and not item.name.endswith('.dist-info'):
-                    dest = lib_dir / item.name
-                    if dest.exists():
-                        shutil.rmtree(dest)
-                    shutil.copytree(item, dest)
-                    print(f"    → Copied {item.name}/")
-                    
+            dest = wheels_dir / whl_file.name
+            shutil.copy2(whl_file, dest)
+            print(f"    → Copied to wheels/{whl_file.name}")
         except Exception as e:
-            print(f"❌ Failed to extract {whl_file}: {e}")
+            print(f"❌ Failed to copy {whl_file}: {e}")
             return False
     
-    print("✅ All packages extracted")
+    print("✅ All wheels copied")
     return True
 
-def cleanup_lib():
-    """Remove unnecessary files from lib directory"""
+def validate_wheels():
+    """Validate that all required wheels are present"""
     addon_dir = Path(__file__).parent
-    lib_dir = addon_dir / "lib"
+    wheels_dir = addon_dir / "wheels"
     
-    print("🧹 Cleaning up lib directory...")
+    print("🔍 Validating wheels...")
     
-    # Patterns to remove
-    cleanup_patterns = [
-        "*.dist-info",
-        "__pycache__",
-        "*.pyc",
-        "*.pyo",
-        "test*",
-        "tests",
-        "*.egg-info",
-        "docs",
-        "examples",
-        "*.txt",  # README, LICENSE, etc.
-        "*.md",
-        "*.rst",
-    ]
+    if not wheels_dir.exists():
+        print("❌ No wheels directory found")
+        return False
     
-    total_removed = 0
+    # Check for required wheels
+    required_packages = ['requests', 'Pillow', 'urllib3', 'certifi', 'charset-normalizer', 'idna']
+    found_wheels = []
     
-    for pattern in cleanup_patterns:
-        for path in lib_dir.rglob(pattern):
-            try:
-                if path.is_dir():
-                    shutil.rmtree(path)
-                    print(f"    🗑️ Removed directory: {path.relative_to(lib_dir)}")
-                else:
-                    path.unlink()
-                    print(f"    🗑️ Removed file: {path.relative_to(lib_dir)}")
-                total_removed += 1
-            except Exception as e:
-                print(f"    ⚠️ Could not remove {path}: {e}")
+    for wheel_file in wheels_dir.glob("*.whl"):
+        package_name = wheel_file.name.split('-')[0].replace('_', '-')
+        found_wheels.append(package_name)
+        print(f"    ✅ Found wheel: {wheel_file.name}")
     
-    print(f"✅ Cleaned up {total_removed} items")
-
-def validate_bundle():
-    """Validate that all required packages are present"""
-    addon_dir = Path(__file__).parent
-    lib_dir = addon_dir / "lib"
-    
-    print("🔍 Validating bundle...")
-    
-    required_packages = ['requests', 'urllib3', 'certifi', 'PIL']
-    missing = []
-    
+    # Check if all required packages are present
+    missing_packages = []
     for package in required_packages:
-        package_dir = lib_dir / package
-        if not package_dir.exists():
-            missing.append(package)
-        else:
-            print(f"    ✅ Found: {package}/")
+        # Handle package name variations
+        package_variants = [package, package.replace('-', '_'), package.lower(), package.upper()]
+        if not any(variant in found_wheels or variant.lower() in [w.lower() for w in found_wheels] for variant in package_variants):
+            missing_packages.append(package)
     
-    if missing:
-        print(f"❌ Missing packages: {', '.join(missing)}")
+    if missing_packages:
+        print(f"❌ Missing required packages: {missing_packages}")
         return False
     
-    # Test imports
-    print("🧪 Testing imports...")
+    print("✅ All required wheels present")
+    return True
+
+# validate_bundle function removed - now using validate_wheels instead
+
+def update_manifest_wheels():
+    """Update blender_manifest.toml with the actual wheel files"""
+    addon_dir = Path(__file__).parent
+    wheels_dir = addon_dir / "wheels"
+    manifest_path = addon_dir / "blender_manifest.toml"
     
-    # Add lib to path temporarily
-    sys.path.insert(0, str(lib_dir))
-    
-    try:
-        import requests
-        print("    ✅ requests imports successfully")
-        
-        # Skip PIL import test when bundling for different Python version
-        try:
-            from PIL import Image
-            print("    ✅ PIL imports successfully")
-        except ImportError as e:
-            if "cannot import name '_imaging'" in str(e):
-                print("    ⚠️ PIL compiled for different Python version (expected for Blender bundle)")
-                print("    ✅ PIL package structure is correct")
-            else:
-                print(f"❌ PIL import test failed: {e}")
-                return False
-        
-    except ImportError as e:
-        print(f"❌ Import test failed: {e}")
+    if not wheels_dir.exists():
+        print("⚠️  No wheels directory found, skipping manifest update")
         return False
-    finally:
-        # Remove from path
-        if str(lib_dir) in sys.path:
-            sys.path.remove(str(lib_dir))
     
-    print("✅ Bundle validation successful")
+    # Get all wheel files
+    wheel_files = sorted([f"./wheels/{whl.name}" for whl in wheels_dir.glob("*.whl")])
+    
+    if not wheel_files:
+        print("⚠️  No wheel files found, skipping manifest update")
+        return False
+    
+    print(f"📝 Updating manifest with {len(wheel_files)} wheels...")
+    
+    # Read current manifest
+    with open(manifest_path, 'r') as f:
+        content = f.read()
+    
+    # Check if wheels section already exists
+    if "wheels = [" in content:
+        # Remove existing wheels section
+        import re
+        content = re.sub(r'# Bundle 3rd party Python modules as wheels\nwheels = \[[\s\S]*?\]\n', '', content)
+        content = re.sub(r'wheels = \[[\s\S]*?\]\n', '', content)
+    
+    # Add wheels section before permissions
+    wheels_section = "\n# Bundle 3rd party Python modules as wheels\nwheels = [\n"
+    for wheel in wheel_files:
+        wheels_section += f'  "{wheel}",\n'
+    wheels_section += "]\n"
+    
+    # Insert before permissions section
+    if "# Permissions" in content:
+        content = content.replace("# Permissions", wheels_section + "\n# Permissions")
+    else:
+        # Add at the end
+        content = content.rstrip() + "\n" + wheels_section
+    
+    # Write updated manifest
+    with open(manifest_path, 'w') as f:
+        f.write(content)
+    
+    print(f"✅ Updated manifest with wheels: {[Path(w).name for w in wheel_files]}")
     return True
 
 def create_package():
@@ -271,7 +254,7 @@ def create_package():
     # Create zip file
     with zipfile.ZipFile(package_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         # Directories and files to exclude from the package
-        exclude_dirs = {'build', 'dist', '__pycache__', '.git'}
+        exclude_dirs = {'build', 'dist', '__pycache__', '.git', 'lib'}
         exclude_files = {
             'build.py', 'clean.py', 'make.py', 'validate_bundle.py',
             '.gitignore', 'BUILD_GUIDE.md', 'README_BUNDLING.md', 
@@ -297,7 +280,7 @@ def create_package():
                 zipf.write(file_path, archive_path)
                 
                 # Show progress for important files
-                if rel_path.parts[0] in {'lib', 'operators', 'ui', 'utils'} or file_path.name.endswith('.py'):
+                if rel_path.parts[0] in {'wheels', 'operators', 'ui', 'utils'} or file_path.name.endswith('.py'):
                     print(f"    📁 Added: {archive_path}")
     
     # Get package size
@@ -309,15 +292,15 @@ def create_package():
     
     return package_path
 
-def get_lib_size():
-    """Get size of lib directory"""
+def get_wheels_size():
+    """Get size of wheels directory"""
     addon_dir = Path(__file__).parent
-    lib_dir = addon_dir / "lib"
+    wheels_dir = addon_dir / "wheels"
     
-    if not lib_dir.exists():
+    if not wheels_dir.exists():
         return 0
     
-    total_size = sum(f.stat().st_size for f in lib_dir.rglob('*') if f.is_file())
+    total_size = sum(f.stat().st_size for f in wheels_dir.rglob('*') if f.is_file())
     return total_size / (1024 * 1024)  # Convert to MB
 
 def find_blender_addons_directory():
@@ -381,7 +364,7 @@ def install_addon_to_blender(package_path=None):
             print(f"    📁 Copying source files from: {addon_dir}")
             
             # Copy all files except build artifacts
-            exclude_dirs = {'build', 'dist', '__pycache__', '.git'}
+            exclude_dirs = {'build', 'dist', '__pycache__', '.git', 'lib'}
             exclude_files = {
                 'build.py', 'clean.py', 'make.py', 'validate_bundle.py',
                 '.gitignore', 'BUILD_GUIDE.md', 'README_BUNDLING.md', 
@@ -449,17 +432,19 @@ def main():
         print("❌ Build failed at dependency download")
         return 1
     
-    # Step 3: Extract packages
-    if not extract_packages():
-        print("❌ Build failed at package extraction")
+    # Step 3: Copy wheels
+    if not copy_wheels():
+        print("❌ Build failed at wheel copying")
         return 1
     
-    # Step 4: Cleanup unnecessary files
-    cleanup_lib()
+    # Step 4: Validate wheels
+    if not validate_wheels():
+        print("❌ Build failed at wheel validation")
+        return 1
     
-    # Step 5: Validate bundle
-    if not validate_bundle():
-        print("❌ Build failed at validation")
+    # Step 5: Update manifest with wheels
+    if not update_manifest_wheels():
+        print("❌ Build failed at manifest update")
         return 1
     
     # Step 6: Create final package
@@ -474,10 +459,10 @@ def main():
             print("You can manually install the package from the dist/ folder.")
     
     # Summary
-    lib_size = get_lib_size()
+    wheels_size = get_wheels_size()
     print("\n" + "=" * 50)
     print("🎉 BUILD SUCCESSFUL!")
-    print(f"📦 Bundled dependencies size: {lib_size:.1f} MB")
+    print(f"📦 Bundled dependencies size: {wheels_size:.1f} MB")
     print(f"📄 Final package: {package_path}")
     
     if not args.no_install:
