@@ -10,6 +10,8 @@ import subprocess
 import shutil
 import zipfile
 import tempfile
+import platform
+import argparse
 from pathlib import Path
 
 # Build configuration
@@ -318,11 +320,127 @@ def get_lib_size():
     total_size = sum(f.stat().st_size for f in lib_dir.rglob('*') if f.is_file())
     return total_size / (1024 * 1024)  # Convert to MB
 
+def find_blender_addons_directory():
+    """Find Blender's addons directory across platforms"""
+    system = platform.system()
+    home = Path.home()
+    
+    # Common Blender version patterns to check
+    blender_versions = ["4.4", "4.3", "4.2", "4.1", "4.0", "3.6", "3.5", "3.4", "3.3"]
+    
+    if system == "Windows":
+        # Windows: %APPDATA%\Blender Foundation\Blender\{version}\scripts\addons
+        base_path = home / "AppData" / "Roaming" / "Blender Foundation" / "Blender"
+    elif system == "Darwin":  # macOS
+        # macOS: ~/Library/Application Support/Blender/{version}/scripts/addons
+        base_path = home / "Library" / "Application Support" / "Blender"
+    elif system == "Linux":
+        # Linux: ~/.config/blender/{version}/scripts/addons
+        base_path = home / ".config" / "blender"
+    else:
+        raise ValueError(f"Unsupported platform: {system}")
+    
+    # Find the highest version directory that exists
+    for version in blender_versions:
+        addons_dir = base_path / version / "scripts" / "addons"
+        if addons_dir.exists():
+            return addons_dir
+    
+    # If no existing version found, use the latest
+    latest_version = blender_versions[0]
+    addons_dir = base_path / latest_version / "scripts" / "addons"
+    print(f"⚠️  No existing Blender addons directory found. Will create: {addons_dir}")
+    return addons_dir
+
+def install_addon_to_blender(package_path=None):
+    """Install the addon directly to Blender's addons directory"""
+    try:
+        # Find Blender's addons directory
+        addons_dir = find_blender_addons_directory()
+        addon_target_dir = addons_dir / ADDON_NAME
+        
+        print(f"🔧 Installing addon to Blender...")
+        print(f"    Target: {addon_target_dir}")
+        
+        # Create addons directory if it doesn't exist
+        addons_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Remove existing addon if it exists
+        if addon_target_dir.exists():
+            print(f"    🗑️  Removing existing addon: {addon_target_dir}")
+            shutil.rmtree(addon_target_dir)
+        
+        # If package_path is provided, extract it
+        if package_path and package_path.exists():
+            print(f"    📦 Extracting package: {package_path}")
+            with zipfile.ZipFile(package_path, 'r') as zipf:
+                zipf.extractall(addons_dir)
+        else:
+            # Copy current source directly
+            addon_dir = Path(__file__).parent
+            print(f"    📁 Copying source files from: {addon_dir}")
+            
+            # Copy all files except build artifacts
+            exclude_dirs = {'build', 'dist', '__pycache__', '.git'}
+            exclude_files = {
+                'build.py', 'clean.py', 'make.py', 'validate_bundle.py',
+                '.gitignore', 'BUILD_GUIDE.md', 'README_BUNDLING.md', 
+                'BUNDLE_DEPENDENCIES.md', 'STRUCTURE.md'
+            }
+            
+            shutil.copytree(
+                addon_dir, 
+                addon_target_dir,
+                ignore=lambda dir, files: [f for f in files if f in exclude_files or f in exclude_dirs]
+            )
+        
+        print(f"    ✅ Addon installed successfully!")
+        print(f"    📍 Location: {addon_target_dir}")
+        return True
+        
+    except Exception as e:
+        print(f"    ❌ Failed to install addon: {e}")
+        return False
+
 def main():
     """Main build process"""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Build Runchat Blender Addon")
+    parser.add_argument("--no-install", action="store_true", 
+                       help="Skip automatic installation to Blender")
+    parser.add_argument("--install-only", action="store_true",
+                       help="Only install existing package, skip build")
+    args = parser.parse_args()
+    
     print("🚀 Building Runchat Blender Addon")
     print("=" * 50)
     
+    # Handle install-only mode
+    if args.install_only:
+        print("📦 Install-only mode: Looking for existing package...")
+        addon_dir = Path(__file__).parent
+        dist_dir = addon_dir / "dist"
+        
+        # Find the latest package
+        if dist_dir.exists():
+            packages = list(dist_dir.glob(f"{ADDON_NAME}-v*.zip"))
+            if packages:
+                latest_package = max(packages, key=lambda p: p.stat().st_mtime)
+                print(f"📦 Found package: {latest_package}")
+                if install_addon_to_blender(latest_package):
+                    print("🎯 Addon installed successfully!")
+                    return 0
+                else:
+                    print("❌ Installation failed")
+                    return 1
+            else:
+                print("❌ No packages found in dist/ directory")
+                return 1
+        else:
+            print("❌ No dist/ directory found")
+            return 1
+    
+    # Normal build process
     # Step 1: Clean previous builds
     clean_build()
     
@@ -347,14 +465,27 @@ def main():
     # Step 6: Create final package
     package_path = create_package()
     
+    # Step 7: Install addon to Blender (unless disabled)
+    if not args.no_install:
+        if install_addon_to_blender(package_path):
+            print("🎯 Addon automatically installed to Blender!")
+        else:
+            print("⚠️  Addon package created but automatic installation failed.")
+            print("You can manually install the package from the dist/ folder.")
+    
     # Summary
     lib_size = get_lib_size()
     print("\n" + "=" * 50)
     print("🎉 BUILD SUCCESSFUL!")
     print(f"📦 Bundled dependencies size: {lib_size:.1f} MB")
     print(f"📄 Final package: {package_path}")
-    print("\nThe package is ready for distribution to users!")
-    print("Users can install it directly in Blender as an addon.")
+    
+    if not args.no_install:
+        print("\nThe addon has been automatically installed to Blender!")
+        print("Restart Blender and enable the addon in Preferences > Add-ons.")
+    else:
+        print("\nThe package is ready for distribution!")
+        print("Install manually or run: python build.py --install-only")
     
     return 0
 
