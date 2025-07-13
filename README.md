@@ -52,6 +52,21 @@ python build.py
 ls dist/runchat-blender-v*.zip
 ```
 
+### Creating a Release
+
+To create a complete release with both package and repository index:
+
+```bash
+# Build package and generate repository index in one command
+python scripts/release.py
+
+# This will:
+# 1. Clean previous builds
+# 2. Build the addon package
+# 3. Generate the official Blender repository index
+# 4. Show next steps for publishing
+```
+
 ### Debug Development
 
 For development and debugging, run Blender with Python debugging enabled:
@@ -78,6 +93,14 @@ This will show Python errors, import issues, and console output in the terminal,
 5. **Test with debug mode**: Run Blender with `--debug-python`
 6. **Check console output** for errors or debug messages
 
+### Release Workflow
+
+1. **Create release**: `python scripts/release.py`
+2. **Test the package** locally in Blender
+3. **Commit and push**: `git add dist/ && git commit -m "Release vX.X.X" && git push`
+4. **Create GitHub release** and upload the .zip file
+5. **Repository is ready** at: `https://github.com/jpazzi/runchat-blender/raw/main/dist/index.json`
+
 ### Architecture
 
 - **Dependencies**: Uses wheel-based dependencies in `wheels/` directory (handled automatically by Blender)
@@ -92,11 +115,27 @@ This will show Python errors, import issues, and console output in the terminal,
 - **Python Console**: Blender → Scripting → Python Console
 - **Debug Messages**: Run with `--debug-python` to see detailed error messages
 
+## Support
+
+Having issues or want to provide feedback? Please open a GitHub issue:
+
+- **🐛 Bug Reports**: [Report a bug](https://github.com/jpazzi/runchat-blender/issues/new?labels=bug&template=bug_report.md)
+- **✨ Feature Requests**: [Request a feature](https://github.com/jpazzi/runchat-blender/issues/new?labels=enhancement&template=feature_request.md)
+- **❓ Questions**: [Ask a question](https://discord.gg/2KXUBZNZ4e)
+- **💬 General Feedback**: [Share feedback](https://discord.gg/2KXUBZNZ4e)
+
+When reporting issues, please include:
+- Your Blender version
+- Your operating system
+- Steps to reproduce the problem
+- Console output (if available)
+
 ## Links
 
 - [Get API Key](https://runchat.app/signup/blender)
 - [Documentation](https://docs.runchat.app)
 - [Runchat App](https://runchat.app) 
+- [GitHub Issues](https://github.com/jpazzi/runchat-blender/issues)
 
 ## License
 
