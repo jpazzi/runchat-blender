@@ -1,4 +1,22 @@
 # __init__.py
+# Runchat Blender Addon - Integrates Runchat workflows directly into Blender
+# Copyright (C) 2024 Runchat
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# This plugin connects to the Runchat API, which is a separate service
+# with its own terms of service and privacy policy.
 
 # Wheel-based dependencies are automatically handled by Blender's extension system
 # No manual path manipulation needed for wheel-based dependencies
@@ -13,6 +31,7 @@ bl_info = {
     "warning": "",
     "doc_url": "https://docs.runchat.app",
     "category": "System",
+    "license": "GPL v3",
 }
 
 import bpy
