@@ -115,11 +115,27 @@ This will show Python errors, import issues, and console output in the terminal,
 - **Python Console**: Blender → Scripting → Python Console
 - **Debug Messages**: Run with `--debug-python` to see detailed error messages
 
+## Support
+
+Having issues or want to provide feedback? Please open a GitHub issue:
+
+- **🐛 Bug Reports**: [Report a bug](https://github.com/jpazzi/runchat-blender/issues/new?labels=bug&template=bug_report.md)
+- **✨ Feature Requests**: [Request a feature](https://github.com/jpazzi/runchat-blender/issues/new?labels=enhancement&template=feature_request.md)
+- **❓ Questions**: [Ask a question](https://discord.gg/2KXUBZNZ4e)
+- **💬 General Feedback**: [Share feedback](https://discord.gg/2KXUBZNZ4e)
+
+When reporting issues, please include:
+- Your Blender version
+- Your operating system
+- Steps to reproduce the problem
+- Console output (if available)
+
 ## Links
 
 - [Get API Key](https://runchat.app/signup/blender)
 - [Documentation](https://docs.runchat.app)
 - [Runchat App](https://runchat.app) 
+- [GitHub Issues](https://github.com/jpazzi/runchat-blender/issues)
 
 ## License
 
