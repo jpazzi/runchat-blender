@@ -1,0 +1,60 @@
+name: Build and Release Blender Extension
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install any build dependencies if needed
+        
+    - name: Build extension package
+      run: |
+        python build.py --no-install
+        
+    - name: Generate repository index using Blender
+      run: |
+        # Find the built package
+        PACKAGE_PATH=$(find dist -name "*.zip" | head -1)
+        echo "📦 Package built: $PACKAGE_PATH"
+        
+        # Generate official index.json using Blender
+        python scripts/generate-repository.py dist
+        
+        echo "📋 Repository index generated at: https://github.com/jpazzi/runchat-blender/raw/main/dist/index.json"
+    
+    - name: Commit and push updates
+      if: github.event_name == 'release'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add dist/
+        git diff --staged --quiet || git commit -m "Update repository index and packages for release ${{ github.event.release.tag_name }}"
+        git push origin main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Create artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: blender-extension
+        path: |
+          dist/*.zip
+          dist/index.json 
