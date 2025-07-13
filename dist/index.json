@@ -1,0 +1,35 @@
+{
+  "version": "v1",
+  "blocklist": [],
+  "data": [
+    {
+      "schema_version": "1.0.0",
+      "id": "runchat_blender_addon",
+      "name": "Runchat Blender Addon",
+      "tagline": "Integrates Runchat workflows directly into Blender",
+      "version": "1.2.0",
+      "type": "add-on",
+      "maintainer": "Runchat",
+      "license": [
+        "SPDX:GPL-3.0-or-later"
+      ],
+      "blender_version_min": "4.2.0",
+      "website": "https://docs.runchat.app",
+      "permissions": {
+        "network": "Connect to Runchat API to sync workflows and data",
+        "files": "Import/export workflow files and assets"
+      },
+      "tags": [
+        "System",
+        "Pipeline",
+        "Import-Export"
+      ],
+      "python_versions": [
+        "3.11"
+      ],
+      "archive_url": "https://github.com/jpazzi/runchat-blender/raw/main/dist/runchat-blender-v1.2.0.zip",
+      "archive_size": 5330855,
+      "archive_hash": "sha256:a5ff95a536b725cea75d9ce57f325249e4d949266d34c5610f32a5e83fdf4bc1"
+    }
+  ]
+}
